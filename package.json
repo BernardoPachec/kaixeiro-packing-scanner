@@ -1,0 +1,10 @@
+{
+  "name": "kaixeiro-packing-scanner",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Scanner de QR de etiquetas ML + painel de status de embalagem para a Kaixeiro.",
+  "scripts": {
+    "seed": "node scripts/seed_token.js"
+  },
+  "engines": { "node": "20.x" }
+}

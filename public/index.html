@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<meta name="theme-color" content="#0b1220" />
+<title>Kaixeiro · Bancada de Envios</title>
+<link rel="manifest" href="manifest.json" />
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<style>
+  :root{
+    --bg:#0b1220; --card:#151f33; --card2:#1c2942; --line:#28374f;
+    --txt:#eaf0fb; --muted:#8ea2c4; --accent:#ffd400; --accent2:#2a7fff;
+    --flex:#22c55e; --agencia:#f59e0b; --full:#64748b;
+    --todo:#64748b; --print:#2a7fff; --sent:#22c55e;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--txt)}
+  header{position:sticky;top:0;z-index:10;background:#0b1220ee;backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:12px 16px}
+  header h1{margin:0;font-size:17px;letter-spacing:.5px}
+  header h1 b{color:var(--accent)}
+  .tabs{display:flex;gap:8px;margin-top:10px}
+  .tab{flex:1;padding:10px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);font-weight:700;font-size:15px;text-align:center;cursor:pointer}
+  .tab.active{background:var(--accent);color:#0b1220;border-color:var(--accent)}
+  main{padding:16px;max-width:640px;margin:0 auto}
+  .hidden{display:none}
+
+  /* Scanner */
+  #reader{width:100%;border-radius:16px;overflow:hidden;border:1px solid var(--line)}
+  .scan-hint{color:var(--muted);text-align:center;font-size:14px;margin:12px 0}
+  .btn{display:block;width:100%;padding:14px;border-radius:14px;border:none;font-weight:800;font-size:16px;cursor:pointer}
+  .btn-primary{background:var(--accent);color:#0b1220}
+  .btn-ghost{background:var(--card2);color:var(--txt);border:1px solid var(--line)}
+  .result{margin-top:16px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;animation:pop .18s ease}
+  @keyframes pop{from{transform:scale(.97);opacity:.3}to{transform:scale(1);opacity:1}}
+  .badge{display:inline-block;padding:6px 14px;border-radius:999px;font-weight:800;font-size:15px;color:#0b1220}
+  .badge.Flex{background:var(--flex)}
+  .badge.Agência{background:var(--agencia)}
+  .badge.Full{background:var(--full);color:#fff}
+  .prod{font-size:22px;font-weight:800;line-height:1.25;margin:14px 0 4px}
+  .qtd{display:inline-block;background:var(--accent);color:#0b1220;font-weight:800;border-radius:10px;padding:4px 12px;font-size:16px}
+  .row{display:flex;justify-content:space-between;padding:10px 0;border-top:1px solid var(--line);font-size:15px}
+  .row .k{color:var(--muted)}
+  .err{background:#3a1420;border:1px solid #7f2436;color:#ffd5dd}
+
+  /* Painel */
+  .cols{display:flex;flex-direction:column;gap:18px}
+  .col h2{font-size:14px;text-transform:uppercase;letter-spacing:1px;margin:0 0 8px;display:flex;align-items:center;gap:8px}
+  .dot{width:10px;height:10px;border-radius:50%}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px}
+  .card .p{font-weight:700;font-size:15px;margin:0 0 4px}
+  .card .meta{color:var(--muted);font-size:13px}
+  .card .acts{display:flex;gap:8px;margin-top:10px}
+  .mini{flex:1;padding:8px;border-radius:9px;border:1px solid var(--line);background:var(--card2);color:var(--txt);font-size:13px;font-weight:700;cursor:pointer}
+  .tag{display:inline-block;font-size:11px;font-weight:800;padding:2px 8px;border-radius:6px;color:#0b1220;margin-left:6px}
+  .empty{color:var(--muted);font-size:13px;font-style:italic;padding:6px 2px}
+  .refresh{color:var(--accent2);background:none;border:none;font-weight:700;cursor:pointer;font-size:14px}
+</style>
+</head>
+<body>
+<header>
+  <h1>KAIXEIRO · <b>Bancada de Envios</b></h1>
+  <div class="tabs">
+    <div class="tab active" data-tab="scan" onclick="showTab('scan')">📷 Escanear</div>
+    <div class="tab" data-tab="board" onclick="showTab('board')">📋 Painel</div>
+  </div>
+</header>
+
+<main>
+  <!-- SCANNER -->
+  <section id="tab-scan">
+    <div id="reader"></div>
+    <p class="scan-hint" id="scanHint">Aponte a câmera para o QR da etiqueta.</p>
+    <button class="btn btn-ghost" id="startBtn" onclick="startScanner()">Ativar câmera</button>
+    <div id="result"></div>
+  </section>
+
+  <!-- PAINEL -->
+  <section id="tab-board" class="hidden">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <span style="color:var(--muted);font-size:14px" id="boardCount">—</span>
+      <button class="refresh" onclick="loadBoard()">↻ Atualizar</button>
+    </div>
+    <div class="cols" id="cols"></div>
+  </section>
+</main>
+
+<script>
+const API = ""; // mesma origem (Vercel)
+const COLS = [
+  {key:"a_fazer",           label:"A fazer",           color:"#64748b"},
+  {key:"etiqueta_impressa", label:"Etiqueta impressa", color:"#2a7fff"},
+  {key:"enviado",           label:"Enviado",           color:"#22c55e"},
+];
+const NEXT = {a_fazer:"etiqueta_impressa", etiqueta_impressa:"enviado"};
+const NEXT_LABEL = {a_fazer:"Marcar impressa →", etiqueta_impressa:"Marcar enviada →"};
+
+function showTab(t){
+  document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x.dataset.tab===t));
+  document.getElementById("tab-scan").classList.toggle("hidden",t!=="scan");
+  document.getElementById("tab-board").classList.toggle("hidden",t!=="board");
+  if(t==="board") loadBoard();
+}
+
+// ---------- Scanner ----------
+let html5Qr=null, scanning=false, lastCode=null, lastAt=0;
+
+async function startScanner(){
+  if(scanning) return;
+  document.getElementById("startBtn").style.display="none";
+  html5Qr = new Html5Qrcode("reader");
+  scanning=true;
+  try{
+    await html5Qr.start(
+      {facingMode:"environment"},
+      {fps:10, qrbox:{width:240,height:240}},
+      onScan,
+      ()=>{}
+    );
+  }catch(e){
+    document.getElementById("scanHint").innerHTML="Não consegui abrir a câmera. Verifique a permissão do navegador. ("+e+")";
+    scanning=false;
+    document.getElementById("startBtn").style.display="block";
+  }
+}
+
+function onScan(text){
+  const now=Date.now();
+  if(text===lastCode && now-lastAt<3000) return; // debounce do mesmo QR
+  lastCode=text; lastAt=now;
+  if(navigator.vibrate) navigator.vibrate(60);
+  lookup(text);
+}
+
+async function lookup(qr){
+  const box=document.getElementById("result");
+  box.innerHTML='<div class="result">Consultando…</div>';
+  try{
+    const r=await fetch(API+"/api/lookup?qr="+encodeURIComponent(qr));
+    const d=await r.json();
+    if(!d.ok){ box.innerHTML='<div class="result err">⚠️ '+(d.error||"Erro")+'</div>'; return; }
+    renderResult(d);
+  }catch(e){
+    box.innerHTML='<div class="result err">Falha de conexão: '+e.message+'</div>';
+  }
+}
+
+function badgeClass(tipo){
+  if(tipo && tipo.startsWith("Flex")) return "Flex";
+  if(tipo && tipo.startsWith("Agência")) return "Agência";
+  if(tipo==="Full") return "Full";
+  return "Full";
+}
+
+function renderResult(d){
+  const it=d.itens && d.itens[0] || {};
+  const extra=(d.itens||[]).slice(1).map(x=>`<div class="row"><span>${x.title}</span><span class="qtd">×${x.quantity}</span></div>`).join("");
+  document.getElementById("result").innerHTML=`
+    <div class="result">
+      <span class="badge ${badgeClass(d.tipo)}">${d.tipo}</span>
+      <div class="prod">${it.title || "(produto não identificado)"}</div>
+      <span class="qtd">Qtd: ${it.quantity ?? "?"}</span>
+      ${it.variation?`<div class="meta" style="color:var(--muted);margin-top:6px">${it.variation}</div>`:""}
+      ${extra}
+      <div class="row"><span class="k">Destinatário</span><span>${d.destinatario||"—"}</span></div>
+      <div class="row"><span class="k">Envio</span><span>#${d.shipment_id}</span></div>
+    </div>`;
+}
+
+// ---------- Painel ----------
+async function loadBoard(){
+  const wrap=document.getElementById("cols");
+  wrap.innerHTML='<div class="empty">Carregando…</div>';
+  try{
+    const r=await fetch(API+"/api/board");
+    const d=await r.json();
+    if(!d.ok){ wrap.innerHTML='<div class="empty">Erro: '+d.error+'</div>'; return; }
+    render(d.orders||[]);
+  }catch(e){ wrap.innerHTML='<div class="empty">Falha: '+e.message+'</div>'; }
+}
+
+function effectiveStatus(o){
+  if(o.ml_status==="shipped"||o.ml_status==="delivered") return "enviado";
+  return o.status || "a_fazer";
+}
+
+function render(orders){
+  document.getElementById("boardCount").textContent=orders.length+" pedido(s)";
+  const wrap=document.getElementById("cols"); wrap.innerHTML="";
+  COLS.forEach(c=>{
+    const list=orders.filter(o=>effectiveStatus(o)===c.key);
+    const col=document.createElement("div"); col.className="col";
+    col.innerHTML=`<h2><span class="dot" style="background:${c.color}"></span>${c.label} (${list.length})</h2>`;
+    if(!list.length) col.innerHTML+='<div class="empty">vazio</div>';
+    list.forEach(o=>{
+      const nx=NEXT[c.key];
+      col.innerHTML+=`
+        <div class="card">
+          <p class="p">${o.produto||"(sem título)"} ${o.quantidade?`<span class="tag" style="background:var(--accent)">×${o.quantidade}</span>`:""}</p>
+          <div class="meta">${o.tipo||""} · ${o.destinatario||"—"} · #${o.shipment_id}</div>
+          <div class="acts">
+            ${nx?`<button class="mini" onclick="setStatus('${o.shipment_id}','${nx}')">${NEXT_LABEL[c.key]}</button>`:""}
+            ${c.key!=="a_fazer"?`<button class="mini" onclick="setStatus('${o.shipment_id}','a_fazer')">↩︎ A fazer</button>`:""}
+          </div>
+        </div>`;
+    });
+    wrap.appendChild(col);
+  });
+}
+
+async function setStatus(shipment_id,status){
+  await fetch(API+"/api/board",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({shipment_id,status})});
+  loadBoard();
+}
+</script>
+</body>
+</html>
