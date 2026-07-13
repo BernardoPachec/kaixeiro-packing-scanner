@@ -11,7 +11,7 @@
   :root{
     --bg:#0b1220; --card:#151f33; --card2:#1c2942; --line:#28374f;
     --txt:#eaf0fb; --muted:#8ea2c4; --accent:#ffd400; --accent2:#2a7fff;
-    --flex:#22c55e; --agencia:#f59e0b; --full:#64748b;
+    --flex:#22c55e; --agencia:#f59e0b; --full:#64748b; --danger:#dc2626;
     --todo:#64748b; --print:#2a7fff; --sent:#22c55e;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -55,6 +55,13 @@
   .tag{display:inline-block;font-size:11px;font-weight:800;padding:2px 8px;border-radius:6px;color:#0b1220;margin-left:6px}
   .empty{color:var(--muted);font-size:13px;font-style:italic;padding:6px 2px}
   .refresh{color:var(--accent2);background:none;border:none;font-weight:700;cursor:pointer;font-size:14px}
+
+  /* Página de resultado */
+  #tab-result{padding:16px;max-width:640px;margin:0 auto}
+  .foto-produto{width:160px;height:160px;border-radius:50%;object-fit:cover;display:block;margin:4px auto 16px;border:3px solid var(--line);background:var(--card2)}
+  .qty-alert{background:var(--danger);color:#fff;font-weight:900;font-size:17px;text-align:center;padding:16px;border-radius:14px;letter-spacing:.3px;margin-bottom:14px;animation:pulse 1s ease-in-out infinite}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,.55)}50%{box-shadow:0 0 0 12px rgba(220,38,38,0)}}
+  .btn-rescan{margin-top:18px;font-size:17px;padding:16px}
 </style>
 </head>
 <body>
@@ -83,6 +90,12 @@
     </div>
     <div class="cols" id="cols"></div>
   </section>
+
+  <!-- RESULTADO (tela cheia após escanear) -->
+  <section id="tab-result" class="hidden">
+    <div id="resultContent"></div>
+    <button class="btn btn-primary btn-rescan" onclick="voltarParaScanner()">📷 Escanear novamente</button>
+  </section>
 </main>
 
 <script>
@@ -99,7 +112,20 @@ function showTab(t){
   document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x.dataset.tab===t));
   document.getElementById("tab-scan").classList.toggle("hidden",t!=="scan");
   document.getElementById("tab-board").classList.toggle("hidden",t!=="board");
+  document.getElementById("tab-result").classList.add("hidden");
+  document.querySelector("header").classList.remove("hidden");
   if(t==="board") loadBoard();
+}
+
+function showResultView(){
+  document.querySelector("header").classList.add("hidden");
+  document.getElementById("tab-scan").classList.add("hidden");
+  document.getElementById("tab-board").classList.add("hidden");
+  document.getElementById("tab-result").classList.remove("hidden");
+}
+
+function voltarParaScanner(){
+  showTab("scan");
 }
 
 // ---------- Scanner ----------
@@ -139,7 +165,9 @@ async function lookup(qr){
     const r=await fetch(API+"/api/lookup?qr="+encodeURIComponent(qr));
     const d=await r.json();
     if(!d.ok){ box.innerHTML='<div class="result err">⚠️ '+(d.error||"Erro")+'</div>'; return; }
+    box.innerHTML="";
     renderResult(d);
+    showResultView();
   }catch(e){
     box.innerHTML='<div class="result err">Falha de conexão: '+e.message+'</div>';
   }
@@ -155,7 +183,16 @@ function badgeClass(tipo){
 function renderResult(d){
   const it=d.itens && d.itens[0] || {};
   const extra=(d.itens||[]).slice(1).map(x=>`<div class="row"><span>${x.title}</span><span class="qtd">×${x.quantity}</span></div>`).join("");
-  document.getElementById("result").innerHTML=`
+  const totalQtd=(d.itens||[]).reduce((s,x)=>s+(x.quantity||0),0) || (it.quantity||0);
+  const alerta=totalQtd>1
+    ? `<div class="qty-alert">⚠️ ATENÇÃO: ${totalQtd} UNIDADES NESTE PEDIDO ⚠️</div>`
+    : "";
+  const foto=d.foto
+    ? `<img class="foto-produto" src="${d.foto}" alt="${(it.title||"").replace(/"/g,"")}">`
+    : "";
+  document.getElementById("resultContent").innerHTML=`
+    ${alerta}
+    ${foto}
     <div class="result">
       <span class="badge ${badgeClass(d.tipo)}">${d.tipo}</span>
       <div class="prod">${it.title || "(produto não identificado)"}</div>
@@ -163,6 +200,9 @@ function renderResult(d){
       ${it.variation?`<div class="meta" style="color:var(--muted);margin-top:6px">${it.variation}</div>`:""}
       ${extra}
       <div class="row"><span class="k">Destinatário</span><span>${d.destinatario||"—"}</span></div>
+      <div class="row"><span class="k">Endereço</span><span>${d.endereco||"—"}</span></div>
+      <div class="row"><span class="k">Bairro</span><span>${d.bairro||"—"}</span></div>
+      <div class="row"><span class="k">Complemento</span><span>${d.complemento||"—"}</span></div>
       <div class="row"><span class="k">Envio</span><span>#${d.shipment_id}</span></div>
     </div>`;
 }

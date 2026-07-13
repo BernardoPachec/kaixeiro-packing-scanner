@@ -125,6 +125,7 @@ async function getShipment(shipmentId) {
   let items = [];
   if (it.status === 200 && Array.isArray(it.data)) {
     items = it.data.map((x) => ({
+      item_id: x.item_id || x.id || x.item?.id || null,
       title: x.description || x.item?.title || x.title || `Item ${x.item_id || ""}`,
       quantity: x.quantity ?? 1,
       variation: x.variation_attributes
@@ -133,7 +134,20 @@ async function getShipment(shipmentId) {
     }));
   }
 
+  // Foto do primeiro item, a mesma usada no anúncio do ML.
+  let foto = null;
+  const firstItemId = items[0]?.item_id;
+  if (firstItemId) {
+    const detail = await mlFetchWithToken(`/items/${firstItemId}`, it.row || s.row);
+    if (detail.status === 200 && detail.data?.pictures?.length) {
+      foto = detail.data.pictures[0].secure_url;
+    } else if (detail.status === 200 && detail.data?.thumbnail) {
+      foto = detail.data.thumbnail.replace(/^http:/, "https:");
+    }
+  }
+
   const logistic = d.logistic_type || d.mode;
+  const addr = d.receiver_address || {};
   return {
     ok: true,
     shipment_id: String(d.id),
@@ -141,7 +155,12 @@ async function getShipment(shipmentId) {
     ml_status: d.status,        // pending, ready_to_ship, shipped, delivered...
     logistic_type: logistic,
     tipo: LOGISTIC_LABELS[logistic] || logistic || "Desconhecido",
-    destinatario: d.receiver_address?.receiver_name || null,
+    destinatario: addr.receiver_name || null,
+    endereco: addr.address_line || null,
+    bairro: addr.neighborhood?.name || null,
+    complemento: addr.comment || null,
+    cidade: addr.city?.name || null,
+    foto,
     itens: items,
   };
 }
