@@ -2,7 +2,7 @@
 // Retorna produto, quantidade, tipo (Flex/Agência/Full) e destinatário.
 // Se o env estiver disponível, também registra/atualiza o card no painel.
 
-const { getShipment, parseShipmentIdFromQR, sbUpsert } = require("./_ml");
+const { getShipment, parseShipmentIdFromQR, sbUpsert, mlFetch } = require("./_ml");
 
 module.exports = async (req, res) => {
   try {
@@ -14,6 +14,22 @@ module.exports = async (req, res) => {
     if (!shipmentId) {
       res.statusCode = 400;
       return res.end(JSON.stringify({ ok: false, error: "QR/id inválido — não achei o id do envio." }));
+    }
+
+    // TEMP: dump cru da API do ML pra descobrir os campos exatos (remover depois).
+    if (url.searchParams.get("debug") === "1") {
+      const rawShip = await mlFetch(`/shipments/${shipmentId}`);
+      const rawItems = await mlFetch(`/shipments/${shipmentId}/items`);
+      let itemDetail = null;
+      const first = Array.isArray(rawItems.data) ? rawItems.data[0] : null;
+      const candidateId = first && (first.item_id || first.id || first.item?.id);
+      if (candidateId) {
+        const d = await mlFetch(`/items/${candidateId}`);
+        itemDetail = { candidateId, status: d.status, data: d.data };
+      }
+      res.statusCode = 200;
+      res.setHeader("Content-Type", "application/json");
+      return res.end(JSON.stringify({ rawShip: rawShip.data, rawItems: rawItems.data, itemDetail }, null, 2));
     }
 
     const info = await getShipment(shipmentId);
