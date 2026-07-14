@@ -134,17 +134,21 @@ async function getShipment(shipmentId) {
     }));
   }
 
-  // Foto do primeiro item, a mesma usada no anúncio do ML.
-  let foto = null;
-  const firstItemId = items[0]?.item_id;
-  if (firstItemId) {
-    const detail = await mlFetchWithToken(`/items/${firstItemId}`, it.row || s.row);
+  // Foto de cada produto distinto do pedido (a mesma usada no anúncio do ML).
+  // Um item_id só busca a foto uma vez, mesmo que se repita em múltiplas linhas.
+  let tokenRow = it.row || s.row;
+  const photoByItemId = {};
+  const uniqueItemIds = [...new Set(items.map((i) => i.item_id).filter(Boolean))];
+  for (const itemId of uniqueItemIds) {
+    const detail = await mlFetchWithToken(`/items/${itemId}`, tokenRow);
+    tokenRow = detail.row;
     if (detail.status === 200 && detail.data?.pictures?.length) {
-      foto = detail.data.pictures[0].secure_url;
+      photoByItemId[itemId] = detail.data.pictures[0].secure_url;
     } else if (detail.status === 200 && detail.data?.thumbnail) {
-      foto = detail.data.thumbnail.replace(/^http:/, "https:");
+      photoByItemId[itemId] = detail.data.thumbnail.replace(/^http:/, "https:");
     }
   }
+  items = items.map((i) => ({ ...i, foto: i.item_id ? (photoByItemId[i.item_id] || null) : null }));
 
   const logistic = d.logistic_type || d.mode;
   const addr = d.receiver_address || {};
@@ -160,7 +164,6 @@ async function getShipment(shipmentId) {
     bairro: addr.neighborhood?.name || null,
     complemento: addr.comment || null,
     cidade: addr.city?.name || null,
-    foto,
     itens: items,
   };
 }

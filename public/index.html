@@ -3,25 +3,38 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<meta name="theme-color" content="#0b1220" />
+<meta name="theme-color" content="#000000" />
 <title>Kaixeiro · Bancada de Envios</title>
 <link rel="manifest" href="manifest.json" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
+  /* Paleta oficial Kaixeiro Digital: apenas preto, branco e amarelo (#F3AA07).
+     --danger é a única exceção deliberada, fora da paleta: alerta de quantidade
+     precisa ser vermelho pra segurança, ver conversa com o Bernardo. */
   :root{
-    --bg:#0b1220; --card:#151f33; --card2:#1c2942; --line:#28374f;
-    --txt:#eaf0fb; --muted:#8ea2c4; --accent:#ffd400; --accent2:#2a7fff;
-    --flex:#22c55e; --agencia:#f59e0b; --full:#64748b; --danger:#dc2626;
-    --todo:#64748b; --print:#2a7fff; --sent:#22c55e;
+    --bg:#000000; --card:#0d0d0d; --card2:#1a1a1a; --line:rgba(255,255,255,.14);
+    --txt:#ffffff; --muted:rgba(255,255,255,.55); --accent:#F3AA07;
+    --danger:#dc2626;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--txt)}
-  header{position:sticky;top:0;z-index:10;background:#0b1220ee;backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:12px 16px}
-  header h1{margin:0;font-size:17px;letter-spacing:.5px}
+  body{
+    margin:0;font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    background-color:var(--bg);color:var(--txt);font-weight:400;
+    background-image:
+      linear-gradient(rgba(255,255,255,.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.06) 1px, transparent 1px);
+    background-size:32px 32px;
+    min-height:100vh;
+  }
+  header{position:sticky;top:0;z-index:10;background:#000000ee;backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:12px 16px}
+  header h1{margin:0;font-size:17px;letter-spacing:.5px;font-weight:800}
   header h1 b{color:var(--accent)}
   .tabs{display:flex;gap:8px;margin-top:10px}
   .tab{flex:1;padding:10px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);font-weight:700;font-size:15px;text-align:center;cursor:pointer}
-  .tab.active{background:var(--accent);color:#0b1220;border-color:var(--accent)}
+  .tab.active{background:var(--accent);color:#000;border-color:var(--accent)}
   main{padding:16px;max-width:640px;margin:0 auto}
   .hidden{display:none}
 
@@ -29,36 +42,37 @@
   #reader{width:100%;border-radius:16px;overflow:hidden;border:1px solid var(--line)}
   .scan-hint{color:var(--muted);text-align:center;font-size:14px;margin:12px 0}
   .btn{display:block;width:100%;padding:14px;border-radius:14px;border:none;font-weight:800;font-size:16px;cursor:pointer}
-  .btn-primary{background:var(--accent);color:#0b1220}
+  .btn-primary{background:var(--accent);color:#000}
   .btn-ghost{background:var(--card2);color:var(--txt);border:1px solid var(--line)}
   .result{margin-top:16px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;animation:pop .18s ease}
   @keyframes pop{from{transform:scale(.97);opacity:.3}to{transform:scale(1);opacity:1}}
-  .badge{display:inline-block;padding:6px 14px;border-radius:999px;font-weight:800;font-size:15px;color:#0b1220}
-  .badge.Flex{background:var(--flex)}
-  .badge.Agência{background:var(--agencia)}
-  .badge.Full{background:var(--full);color:#fff}
-  .prod{font-size:22px;font-weight:800;line-height:1.25;margin:14px 0 4px}
-  .qtd{display:inline-block;background:var(--accent);color:#0b1220;font-weight:800;border-radius:10px;padding:4px 12px;font-size:16px}
+  .badge{display:inline-block;padding:6px 14px;border-radius:999px;font-weight:800;font-size:15px}
+  .badge.Flex{background:var(--accent);color:#000}
+  .badge.Agência{background:#fff;color:#000}
+  .badge.Full{background:#000;color:#fff;border:1px solid rgba(255,255,255,.4)}
+  .prod{font-size:22px;font-weight:700;line-height:1.25;margin:14px 0 4px}
+  .qtd{display:inline-block;background:var(--accent);color:#000;font-weight:800;border-radius:10px;padding:4px 12px;font-size:16px}
   .row{display:flex;justify-content:space-between;padding:10px 0;border-top:1px solid var(--line);font-size:15px}
   .row .k{color:var(--muted)}
   .err{background:#3a1420;border:1px solid #7f2436;color:#ffd5dd}
 
   /* Painel */
   .cols{display:flex;flex-direction:column;gap:18px}
-  .col h2{font-size:14px;text-transform:uppercase;letter-spacing:1px;margin:0 0 8px;display:flex;align-items:center;gap:8px}
+  .col h2{font-size:14px;text-transform:uppercase;letter-spacing:1px;margin:0 0 8px;display:flex;align-items:center;gap:8px;font-weight:600}
   .dot{width:10px;height:10px;border-radius:50%}
   .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px}
-  .card .p{font-weight:700;font-size:15px;margin:0 0 4px}
+  .card .p{font-weight:600;font-size:15px;margin:0 0 4px}
   .card .meta{color:var(--muted);font-size:13px}
   .card .acts{display:flex;gap:8px;margin-top:10px}
   .mini{flex:1;padding:8px;border-radius:9px;border:1px solid var(--line);background:var(--card2);color:var(--txt);font-size:13px;font-weight:700;cursor:pointer}
-  .tag{display:inline-block;font-size:11px;font-weight:800;padding:2px 8px;border-radius:6px;color:#0b1220;margin-left:6px}
+  .tag{display:inline-block;font-size:11px;font-weight:800;padding:2px 8px;border-radius:6px;color:#000;margin-left:6px}
   .empty{color:var(--muted);font-size:13px;font-style:italic;padding:6px 2px}
-  .refresh{color:var(--accent2);background:none;border:none;font-weight:700;cursor:pointer;font-size:14px}
+  .refresh{color:var(--accent);background:none;border:none;font-weight:700;cursor:pointer;font-size:14px}
 
   /* Página de resultado */
   #tab-result{padding:16px;max-width:640px;margin:0 auto}
-  .foto-produto{width:160px;height:160px;border-radius:50%;object-fit:cover;display:block;margin:4px auto 16px;border:3px solid var(--line);background:var(--card2)}
+  .fotos-row{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin:4px 0 16px}
+  .foto-produto{width:140px;height:140px;border-radius:50%;object-fit:contain;object-position:center;background:#fff;display:block;border:3px solid var(--line);padding:6px}
   .qty-alert{background:var(--danger);color:#fff;font-weight:900;font-size:17px;text-align:center;padding:16px;border-radius:14px;letter-spacing:.3px;margin-bottom:14px;animation:pulse 1s ease-in-out infinite}
   @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,.55)}50%{box-shadow:0 0 0 12px rgba(220,38,38,0)}}
   .btn-rescan{margin-top:18px;font-size:17px;padding:16px}
@@ -101,9 +115,9 @@
 <script>
 const API = ""; // mesma origem (Vercel)
 const COLS = [
-  {key:"a_fazer",           label:"A fazer",           color:"#64748b"},
-  {key:"etiqueta_impressa", label:"Etiqueta impressa", color:"#2a7fff"},
-  {key:"enviado",           label:"Enviado",           color:"#22c55e"},
+  {key:"a_fazer",           label:"A fazer",           color:"rgba(255,255,255,.35)"},
+  {key:"etiqueta_impressa", label:"Etiqueta impressa", color:"#F3AA07"},
+  {key:"enviado",           label:"Enviado ✓",         color:"#ffffff"},
 ];
 const NEXT = {a_fazer:"etiqueta_impressa", etiqueta_impressa:"enviado"};
 const NEXT_LABEL = {a_fazer:"Marcar impressa →", etiqueta_impressa:"Marcar enviada →"};
@@ -126,6 +140,7 @@ function showResultView(){
 
 function voltarParaScanner(){
   showTab("scan");
+  startScanner();
 }
 
 // ---------- Scanner ----------
@@ -150,6 +165,13 @@ async function startScanner(){
   }
 }
 
+async function stopScanner(){
+  if(html5Qr && scanning){
+    try{ await html5Qr.stop(); }catch(e){}
+    scanning=false;
+  }
+}
+
 function onScan(text){
   const now=Date.now();
   if(text===lastCode && now-lastAt<3000) return; // debounce do mesmo QR
@@ -166,6 +188,7 @@ async function lookup(qr){
     const d=await r.json();
     if(!d.ok){ box.innerHTML='<div class="result err">⚠️ '+(d.error||"Erro")+'</div>'; return; }
     box.innerHTML="";
+    await stopScanner();
     renderResult(d);
     showResultView();
   }catch(e){
@@ -187,12 +210,12 @@ function renderResult(d){
   const alerta=totalQtd>1
     ? `<div class="qty-alert">⚠️ ATENÇÃO: ${totalQtd} UNIDADES NESTE PEDIDO ⚠️</div>`
     : "";
-  const foto=d.foto
-    ? `<img class="foto-produto" src="${d.foto}" alt="${(it.title||"").replace(/"/g,"")}">`
-    : "";
+  const fotos=(d.itens||[]).filter(x=>x.foto).map(x=>
+    `<img class="foto-produto" src="${x.foto}" alt="${(x.title||"").replace(/"/g,"")}">`
+  ).join("");
   document.getElementById("resultContent").innerHTML=`
     ${alerta}
-    ${foto}
+    ${fotos?`<div class="fotos-row">${fotos}</div>`:""}
     <div class="result">
       <span class="badge ${badgeClass(d.tipo)}">${d.tipo}</span>
       <div class="prod">${it.title || "(produto não identificado)"}</div>
