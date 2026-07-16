@@ -43,6 +43,19 @@ async function sbUpsert(table, rows, onConflict) {
   return r.json();
 }
 
+// Insere só se a linha ainda não existir (por `conflictCol`). Retorna true se inseriu
+// agora (era nova) e false se já existia — usado pra dedup de notificação.
+async function sbInsertIfNew(table, row, conflictCol) {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?on_conflict=${conflictCol}`, {
+    method: "POST",
+    headers: { ...sbHeaders(), Prefer: "resolution=ignore-duplicates,return=representation" },
+    body: JSON.stringify([row]),
+  });
+  if (!r.ok) throw new Error(`Supabase insert ${table}: ${r.status} ${await r.text()}`);
+  const data = await r.json();
+  return data.length > 0;
+}
+
 // ---- Token ML ---------------------------------------------------------------
 
 async function readTokenRow() {
@@ -170,6 +183,14 @@ async function getShipment(shipmentId) {
   };
 }
 
+// Dado um order_id, resolve o shipment_id associado (usado pelo webhook de vendas,
+// que só recebe o order_id na notificação, não o envio).
+async function getOrderShipmentId(orderId) {
+  const r = await mlFetch(`/orders/${orderId}`);
+  if (r.status !== 200 || !r.data) return null;
+  return r.data.shipping?.id ? String(r.data.shipping.id) : null;
+}
+
 // Extrai o id do envio do conteúdo cru de um QR de etiqueta ML.
 // O QR é um JSON como: {"id":"47501399671","sender_id":...,"hash_code":...}
 function parseShipmentIdFromQR(raw) {
@@ -186,8 +207,10 @@ function parseShipmentIdFromQR(raw) {
 module.exports = {
   mlFetch,
   getShipment,
+  getOrderShipmentId,
   parseShipmentIdFromQR,
   sbSelect,
   sbUpsert,
+  sbInsertIfNew,
   LOGISTIC_LABELS,
 };
