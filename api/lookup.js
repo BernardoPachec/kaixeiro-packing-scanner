@@ -32,9 +32,12 @@ module.exports = async (req, res) => {
           order_id: info.order_id,
           produto: first_item.title || null,
           quantidade: first_item.quantity || null,
+          foto: first_item.foto || null,
           tipo: info.tipo,
           destinatario: info.destinatario,
           ml_status: info.ml_status,
+          substatus: info.substatus,
+          date_first_printed: info.date_first_printed,
           last_seen: new Date().toISOString(),
         }],
         "shipment_id"

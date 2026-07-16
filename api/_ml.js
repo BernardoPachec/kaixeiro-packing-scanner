@@ -157,6 +157,8 @@ async function getShipment(shipmentId) {
     shipment_id: String(d.id),
     order_id: d.order_id ? String(d.order_id) : null,
     ml_status: d.status,        // pending, ready_to_ship, shipped, delivered...
+    substatus: d.substatus || null,               // "printed" quando a etiqueta já foi impressa 1x
+    date_first_printed: d.date_first_printed || null,
     logistic_type: logistic,
     tipo: LOGISTIC_LABELS[logistic] || logistic || "Desconhecido",
     destinatario: addr.receiver_name || null,
