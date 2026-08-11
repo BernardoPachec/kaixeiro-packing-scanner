@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Kaixeiro · QR de acesso à Bancada</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+       background:#000;color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+  .sheet{background:#fff;color:#000;border-radius:24px;max-width:420px;width:100%;padding:32px 28px;text-align:center}
+  .kbadge{display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;background:#F3AA07;border-radius:16px;
+          font-weight:800;font-size:36px;color:#000;margin-bottom:14px}
+  h1{font-size:22px;margin:0 0 4px}
+  .sub{color:#555;font-size:14px;margin:0 0 20px}
+  #qr{display:flex;justify-content:center;margin:0 auto 18px;padding:14px;border:2px solid #000;border-radius:16px;width:fit-content}
+  .steps{text-align:left;font-size:15px;line-height:1.5;color:#222;margin:0 auto;max-width:320px}
+  .steps b{color:#000}
+  .url{margin-top:16px;font-size:12px;color:#888;word-break:break-all}
+  .print-btn{margin-top:22px;background:#F3AA07;border:none;color:#000;font-weight:700;font-size:16px;
+             padding:14px 22px;border-radius:14px;cursor:pointer}
+  @media print{
+    body{background:#fff;padding:0}
+    .sheet{box-shadow:none;max-width:100%}
+    .print-btn{display:none}
+  }
+</style>
+</head>
+<body>
+  <div class="sheet">
+    <div class="kbadge">K</div>
+    <h1>Bancada de Envios</h1>
+    <p class="sub">Aponte a câmera do celular aqui para abrir</p>
+    <div id="qr"></div>
+    <div class="steps">
+      <p style="margin:0 0 6px"><b>Como usar:</b></p>
+      1. Abra a <b>câmera</b> do celular<br>
+      2. Aponte para este QR<br>
+      3. Toque na notificação que aparecer<br>
+      4. Escaneie a etiqueta do pedido
+    </div>
+    <div class="url" id="urlText"></div>
+    <button class="print-btn" onclick="window.print()">🖨️ Imprimir para colar na bancada</button>
+  </div>
+
+<script>
+  // Gera um QR apontando para a raiz do próprio app (a URL onde esta página está hospedada).
+  var appUrl = location.origin + "/?scan=1";
+  document.getElementById("urlText").textContent = appUrl;
+  new QRCode(document.getElementById("qr"), {
+    text: appUrl,
+    width: 240,
+    height: 240,
+    colorDark: "#000000",
+    colorLight: "#ffffff",
+    correctLevel: QRCode.CorrectLevel.M
+  });
+</script>
+</body>
+</html>
