@@ -61,9 +61,11 @@ packing-scanner/
 ├── api/
 │   ├── _ml.js         núcleo: token ML (guardado no Supabase) + chamadas à API + normalização
 │   ├── lookup.js      GET /api/lookup?qr=... → dados do envio + registra card no painel
-│   └── board.js       GET/POST /api/board → lista e atualiza status
+│   ├── board.js       GET/POST /api/board → lista e atualiza status
+│   ├── questions.js   GET /api/questions → perguntas não respondidas dos anúncios no ML
+│   └── ml-webhook.js  POST recebido do ML → avisa venda Flex/Agência no WhatsApp
 ├── public/
-│   ├── index.html     app: aba Scanner + aba Painel (otimizado p/ celular)
+│   ├── index.html     app: aba Scanner + aba Painel + aba Perguntas (otimizado p/ celular)
 │   └── manifest.json  PWA
 ├── scripts/
 │   └── seed_token.js  grava o token ML inicial no Supabase (rodar 1x)

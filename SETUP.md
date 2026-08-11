@@ -82,6 +82,9 @@ disso vira deploy automático.
 2. Toque em **Ativar câmera** e permita o acesso.
 3. Aponte para o QR da etiqueta → produto, quantidade, tipo e destinatário aparecem.
 4. Aba **Painel**: acompanhe e mova cada pedido (A fazer → Etiqueta impressa → Enviado).
+5. Aba **Perguntas**: lista as perguntas não respondidas dos anúncios (só leitura por
+   enquanto — responder ainda é feito no app do ML; rascunho automático é o próximo passo,
+   ver `ROADMAP-Auto-Perguntas-ML.md`).
    Dica: "Adicionar à tela inicial" transforma o site num ícone de app.
 
 ---
@@ -100,7 +103,9 @@ packing-scanner/
 ├── api/
 │   ├── _ml.js        núcleo: token ML (Supabase) + chamadas à API + normalização
 │   ├── lookup.js     GET /api/lookup?qr=... → dados do envio + registra no painel
-│   └── board.js      GET/POST /api/board → lista e atualiza status
+│   ├── board.js      GET/POST /api/board → lista e atualiza status
+│   ├── questions.js  GET /api/questions → perguntas não respondidas dos anúncios no ML
+│   └── ml-webhook.js POST recebido do ML → avisa venda Flex/Agência no WhatsApp
 ├── public/
 │   ├── index.html    app (Scanner + Painel)
 │   └── manifest.json PWA
