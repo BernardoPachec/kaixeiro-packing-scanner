@@ -92,7 +92,7 @@ async function refreshToken(refresh_token) {
   return next;
 }
 
-// Chama a API do ML com um token já em mãos; se der 401, refaz o refresh 1x e repete.
+// Chama a API do ML (GET) com um token já em mãos; se der 401, refaz o refresh 1x e repete.
 // Retorna também o `row` (possivelmente renovado) para o chamador reaproveitar.
 async function mlFetchWithToken(path, row) {
   let res = await fetch(`${ML_API}${path}`, {
@@ -108,10 +108,37 @@ async function mlFetchWithToken(path, row) {
   return { status: res.status, data, row };
 }
 
+// Mesma coisa, mas pra chamadas POST (usado por api/answer.js pra enviar resposta de pergunta).
+async function mlPostWithToken(path, body, row) {
+  const doPost = (token) =>
+    fetch(`${ML_API}${path}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+  let res = await doPost(row.access_token);
+  if (res.status === 401) {
+    row = await refreshToken(row.refresh_token);
+    res = await doPost(row.access_token);
+  }
+  const data = await res.json().catch(() => null);
+  return { status: res.status, data, row };
+}
+
 // Mesma coisa, mas lê o token do Supabase primeiro (uso avulso, fora do getShipment).
 async function mlFetch(path) {
   const row = await readTokenRow();
   const { status, data } = await mlFetchWithToken(path, row);
+  return { status, data };
+}
+
+// Uso avulso (lê o token do Supabase primeiro) pra chamadas POST na API do ML.
+async function mlPost(path, body) {
+  const row = await readTokenRow();
+  const { status, data } = await mlPostWithToken(path, body, row);
   return { status, data };
 }
 
@@ -206,6 +233,7 @@ function parseShipmentIdFromQR(raw) {
 
 module.exports = {
   mlFetch,
+  mlPost,
   getShipment,
   getOrderShipmentId,
   parseShipmentIdFromQR,

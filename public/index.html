@@ -58,6 +58,7 @@
   .btn:active{transform:scale(.97);opacity:.8}
   .btn-primary{background:var(--accent);color:#000}
   .btn-ghost{background:var(--card2);color:var(--txt);border:1px solid var(--line)}
+  .btn:disabled{opacity:.5;cursor:default}
 
   /* Scanner */
   #reader{width:100%;border-radius:16px;overflow:hidden;border:1px solid var(--line)}
@@ -90,12 +91,25 @@
   .refresh{color:var(--accent);background:none;border:none;font-weight:700;cursor:pointer;font-size:14px}
 
   /* Perguntas */
-  .qcard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px}
+  .qcard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px;transition:opacity .3s ease}
   .qcard .card-row{align-items:flex-start;margin-bottom:10px}
   .qcard .p{font-weight:600;font-size:14px;margin:0 0 2px;color:var(--muted)}
   .qcard .texto{font-size:16px;font-weight:600;line-height:1.4;margin:0 0 10px}
   .qcard .data{color:var(--muted);font-size:12px;margin-bottom:10px}
   .qcard a.abrir{display:inline-block;color:#000;background:var(--accent);font-weight:700;font-size:13px;padding:8px 14px;border-radius:10px;text-decoration:none}
+  .qcard textarea.rascunho{
+    width:100%;min-height:84px;background:var(--card2);border:1px solid var(--line);
+    border-radius:12px;color:var(--txt);font-family:inherit;font-size:14px;line-height:1.4;
+    padding:10px;resize:vertical;display:block;
+  }
+  .qcard textarea.rascunho::placeholder{color:var(--muted);font-style:italic}
+  .qcard .acoes{display:flex;gap:8px;margin-top:10px}
+  .qcard .btn-enviar{flex:1;padding:12px;font-size:14px;border-radius:12px}
+  .qcard .btn-regenerar{
+    background:none;border:1px solid var(--line);color:var(--muted);border-radius:12px;
+    padding:0 14px;font-size:16px;cursor:pointer;font-family:inherit;
+  }
+  .qcard.enviada{opacity:.5}
 
   /* Página de resultado */
   #tab-result{padding:16px;max-width:640px;margin:0 auto}
@@ -339,7 +353,7 @@ function render(orders){
 // ---------- Perguntas ----------
 async function loadQuestions(){
   const wrap=document.getElementById("questionsList");
-  wrap.innerHTML='<div class="empty">Carregando…</div>';
+  wrap.innerHTML='<div class="empty">Carregando… (a 1ª vez pode demorar alguns segundos pra gerar os rascunhos)</div>';
   try{
     const r=await fetch(API+"/api/questions");
     const d=await r.json();
@@ -349,8 +363,15 @@ async function loadQuestions(){
     if(!questions.length){ wrap.innerHTML='<div class="empty">Nenhuma pergunta pendente 🎉</div>'; return; }
     wrap.innerHTML=questions.map(q=>{
       const data=q.data?new Date(q.data).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}):"";
+      const placeholder=q.rascunho?"":"Não consegui gerar o rascunho automático — escreva a resposta aqui.";
+      const attrs=[
+        `data-qid="${q.question_id}"`,
+        `data-item="${q.item_id||''}"`,
+        `data-produto="${(q.produto||'').replace(/"/g,'&quot;')}"`,
+        `data-pergunta="${(q.texto||'').replace(/"/g,'&quot;')}"`,
+      ].join(" ");
       return `
-        <div class="qcard">
+        <div class="qcard" ${attrs}>
           <div class="card-row">
             ${q.foto?`<img class="card-foto" src="${q.foto}" alt="">`:'<div class="card-foto card-foto-empty"></div>'}
             <div class="card-info">
@@ -359,10 +380,72 @@ async function loadQuestions(){
           </div>
           <div class="texto">${q.texto||""}</div>
           <div class="data">${data}</div>
-          ${q.permalink?`<a class="abrir" href="${q.permalink}" target="_blank" rel="noopener">Abrir no Mercado Livre ↗</a>`:""}
+          <textarea class="rascunho" placeholder="${placeholder}">${q.rascunho||""}</textarea>
+          <div class="acoes">
+            <button class="btn btn-primary btn-enviar" onclick="enviarResposta(${q.question_id})">Enviar resposta</button>
+            <button class="btn-regenerar" onclick="regenerarRascunho(${q.question_id})" title="Gerar outro rascunho">↻</button>
+          </div>
+          ${q.permalink?`<a class="abrir" style="margin-top:8px" href="${q.permalink}" target="_blank" rel="noopener">Abrir no Mercado Livre ↗</a>`:""}
         </div>`;
     }).join("");
   }catch(e){ wrap.innerHTML='<div class="empty">Falha: '+e.message+'</div>'; }
+}
+
+async function enviarResposta(qid){
+  const card=document.querySelector(`.qcard[data-qid="${qid}"]`);
+  if(!card) return;
+  const textarea=card.querySelector(".rascunho");
+  const texto=textarea.value.trim();
+  if(!texto){ alert("Escreva (ou espere gerar) a resposta antes de enviar."); return; }
+  if(!confirm("Enviar essa resposta pro cliente no Mercado Livre?")) return;
+  const btn=card.querySelector(".btn-enviar");
+  const original=btn.textContent;
+  btn.disabled=true; btn.textContent="Enviando…";
+  try{
+    const r=await fetch(API+"/api/answer",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({question_id:qid, texto})
+    });
+    const d=await r.json();
+    if(!d.ok){ alert("Erro ao enviar: "+(d.error||"falha desconhecida")); btn.disabled=false; btn.textContent=original; return; }
+    card.classList.add("enviada");
+    textarea.disabled=true;
+    btn.textContent="Enviada ✓";
+    setTimeout(()=>{
+      card.remove();
+      const left=document.querySelectorAll("#questionsList .qcard").length;
+      document.getElementById("questionsCount").textContent=left+" pergunta(s) sem resposta";
+      if(!left) document.getElementById("questionsList").innerHTML='<div class="empty">Nenhuma pergunta pendente 🎉</div>';
+    },1000);
+  }catch(e){
+    alert("Falha de conexão: "+e.message);
+    btn.disabled=false; btn.textContent=original;
+  }
+}
+
+async function regenerarRascunho(qid){
+  const card=document.querySelector(`.qcard[data-qid="${qid}"]`);
+  if(!card) return;
+  const textarea=card.querySelector(".rascunho");
+  const btn=card.querySelector(".btn-regenerar");
+  btn.disabled=true; const original=btn.textContent; btn.textContent="…";
+  try{
+    const r=await fetch(API+"/api/questions",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        question_id:qid,
+        item_id:card.dataset.item,
+        produto:card.dataset.produto,
+        pergunta:card.dataset.pergunta,
+      })
+    });
+    const d=await r.json();
+    if(!d.ok){ alert("Erro ao gerar novo rascunho: "+(d.error||"")); }
+    else{ textarea.value=d.rascunho||""; }
+  }catch(e){ alert("Falha de conexão: "+e.message); }
+  btn.disabled=false; btn.textContent=original;
 }
 
 // ---------- Início automático ----------
