@@ -31,6 +31,7 @@ module.exports = async (req, res) => {
 
     const r = await mlPost("/answers", { question_id: Number(question_id), text: textoFinal });
     if (r.status !== 200 && r.status !== 201) {
+      console.error(`aviso: ML recusou resposta da pergunta ${question_id} (status ${r.status}):`, JSON.stringify(r.data));
       res.statusCode = 502;
       return res.end(JSON.stringify({ ok: false, error: "Mercado Livre recusou a resposta.", detail: r.data }));
     }
