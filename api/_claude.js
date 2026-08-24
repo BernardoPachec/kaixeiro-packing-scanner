@@ -4,7 +4,7 @@
 // (Nome do arquivo ficou "_claude.js" por histórico do projeto, mas hoje chama o Gemini.)
 
 const { GEMINI_API_KEY, GEMINI_MODEL } = process.env;
-const MODEL = GEMINI_MODEL || "gemini-2.0-flash";
+const MODEL = GEMINI_MODEL || "gemini-3.6-flash";
 const GEMINI_API = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
 
 const SYSTEM_PROMPT = `Você é o atendente humano da Kaixeiro, uma loja de produtos automotivos de detalhamento (marcas: Cadillac, Autoamerica, Jaça, Dub Boyz, Magil Clean, Menzerna, Mothers) no Mercado Livre. Você está respondendo uma pergunta que um cliente fez direto no anúncio.
