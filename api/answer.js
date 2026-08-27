@@ -51,6 +51,14 @@ module.exports = async (req, res) => {
         } catch (e) {
           console.error("aviso: falha ao buscar motivo da infração:", e.message);
         }
+        // Diagnóstico extra: às vezes o bloqueio é na PERGUNTA em si (suspeita de spam,
+        // "hold", etc.), não no texto da resposta — loga o estado bruto da pergunta no ML.
+        try {
+          const qDetail = await mlFetch(`/questions/${question_id}`);
+          console.error(`diagnostico pergunta ${question_id}:`, JSON.stringify(qDetail.data));
+        } catch (e) {
+          console.error("aviso: falha ao buscar detalhe da pergunta:", e.message);
+        }
       }
 
       res.statusCode = 502;
