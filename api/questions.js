@@ -74,17 +74,24 @@ module.exports = async (req, res) => {
     }
     const sellerId = me.data.id;
 
-    const qs = await mlFetch(
-      `/questions/search?seller_id=${sellerId}&status=UNANSWERED&api_version=4&sort_fields=date_created&sort_types=DESC&limit=50`
-    );
+    const [qs, qsAns] = await Promise.all([
+      mlFetch(
+        `/questions/search?seller_id=${sellerId}&status=UNANSWERED&api_version=4&sort_fields=date_created&sort_types=DESC&limit=50`
+      ),
+      mlFetch(
+        `/questions/search?seller_id=${sellerId}&status=ANSWERED&api_version=4&sort_fields=date_created&sort_types=DESC&limit=20`
+      ),
+    ]);
     if (qs.status !== 200 || !qs.data) {
       res.statusCode = 502;
       return res.end(JSON.stringify({ ok: false, error: "Falha ao buscar perguntas no ML.", detail: qs.data }));
     }
     const questions = qs.data.questions || [];
+    // Respondidas: se essa busca falhar, não derruba a lista de pendentes — só fica sem histórico.
+    const answered = (qsAns.status === 200 && qsAns.data?.questions) || [];
 
     // Dados do produto (título, foto, link) de cada item citado — em lote, uma chamada só.
-    const itemIds = [...new Set(questions.map((q) => q.item_id).filter(Boolean))];
+    const itemIds = [...new Set([...questions, ...answered].map((q) => q.item_id).filter(Boolean))];
     const itemById = {};
     if (itemIds.length) {
       const items = await mlFetch(
@@ -129,7 +136,7 @@ module.exports = async (req, res) => {
       else console.error(`aviso: falha ao gerar rascunho da pergunta ${q.id}:`, r.reason?.message);
     });
 
-    const out = questions.map((q) => {
+    const pendentes = questions.map((q) => {
       const item = itemById[q.item_id] || {};
       const existente = existentes[String(q.id)];
       const rascunho = existente?.rascunho || rascunhoPorId[q.id] || null;
@@ -145,8 +152,28 @@ module.exports = async (req, res) => {
       };
     });
 
+    const respondidas = answered.map((q) => {
+      const item = itemById[q.item_id] || {};
+      return {
+        question_id: q.id,
+        item_id: q.item_id,
+        texto: q.text,
+        data: q.date_created,
+        produto: item.title || null,
+        foto: item.secure_thumbnail || item.thumbnail || null,
+        permalink: item.permalink || null,
+        resposta: q.answer?.text || null,
+        respondida_em: q.answer?.date_created || null,
+      };
+    });
+
     res.statusCode = 200;
-    return res.end(JSON.stringify({ ok: true, total: qs.data.total ?? out.length, questions: out }));
+    return res.end(JSON.stringify({
+      ok: true,
+      total: qs.data.total ?? pendentes.length,
+      pendentes,
+      respondidas,
+    }));
   } catch (e) {
     res.statusCode = 500;
     return res.end(JSON.stringify({ ok: false, error: e.message }));

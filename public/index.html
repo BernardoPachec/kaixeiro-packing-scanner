@@ -110,6 +110,12 @@
     padding:0 14px;font-size:16px;cursor:pointer;font-family:inherit;
   }
   .qcard.enviada{opacity:.5}
+  .qcard.qcard-respondida{opacity:.85}
+  .qcard.qcard-respondida .resposta-enviada{
+    background:var(--card2);border-radius:12px;padding:10px;font-size:14px;line-height:1.4;
+    border-left:3px solid var(--accent);margin-top:6px;
+  }
+  .secao-titulo{color:var(--muted);font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin:22px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
 
   /* Página de resultado */
   #tab-result{padding:16px;max-width:640px;margin:0 auto}
@@ -160,6 +166,9 @@
       <button class="refresh" onclick="loadQuestions()">↻ Atualizar</button>
     </div>
     <div id="questionsList"></div>
+
+    <div class="secao-titulo" id="answeredCount">Respondidas</div>
+    <div id="answeredList"></div>
   </section>
 
   <!-- RESULTADO (tela cheia após escanear) -->
@@ -351,6 +360,30 @@ function render(orders){
 }
 
 // ---------- Perguntas ----------
+function renderAnswered(list){
+  const wrap=document.getElementById("answeredList");
+  document.getElementById("answeredCount").textContent="Respondidas ("+list.length+")";
+  if(!list.length){ wrap.innerHTML='<div class="empty">Nenhuma pergunta respondida ainda.</div>'; return; }
+  wrap.innerHTML=list.map(q=>{
+    const data=q.data?new Date(q.data).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}):"";
+    const dataResp=q.respondida_em?new Date(q.respondida_em).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}):"";
+    return `
+      <div class="qcard qcard-respondida">
+        <div class="card-row">
+          ${q.foto?`<img class="card-foto" src="${q.foto}" alt="">`:'<div class="card-foto card-foto-empty"></div>'}
+          <div class="card-info">
+            <p class="p">${q.produto||"Produto"}</p>
+          </div>
+        </div>
+        <div class="texto">${q.texto||""}</div>
+        <div class="data">Perguntado ${data}</div>
+        <div class="resposta-enviada">${q.resposta||"(sem texto salvo)"}</div>
+        <div class="data" style="margin-top:6px">Respondido ${dataResp}</div>
+        ${q.permalink?`<a class="abrir" style="margin-top:8px" href="${q.permalink}" target="_blank" rel="noopener">Abrir no Mercado Livre ↗</a>`:""}
+      </div>`;
+  }).join("");
+}
+
 async function loadQuestions(){
   const wrap=document.getElementById("questionsList");
   wrap.innerHTML='<div class="empty">Carregando… (a 1ª vez pode demorar alguns segundos pra gerar os rascunhos)</div>';
@@ -358,8 +391,9 @@ async function loadQuestions(){
     const r=await fetch(API+"/api/questions");
     const d=await r.json();
     if(!d.ok){ wrap.innerHTML='<div class="empty">Erro: '+d.error+'</div>'; return; }
-    const questions=d.questions||[];
+    const questions=d.pendentes||[];
     document.getElementById("questionsCount").textContent=questions.length+" pergunta(s) sem resposta";
+    renderAnswered(d.respondidas||[]);
     if(!questions.length){ wrap.innerHTML='<div class="empty">Nenhuma pergunta pendente 🎉</div>'; return; }
     wrap.innerHTML=questions.map(q=>{
       const data=q.data?new Date(q.data).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}):"";
@@ -412,12 +446,7 @@ async function enviarResposta(qid){
     card.classList.add("enviada");
     textarea.disabled=true;
     btn.textContent="Enviada ✓";
-    setTimeout(()=>{
-      card.remove();
-      const left=document.querySelectorAll("#questionsList .qcard").length;
-      document.getElementById("questionsCount").textContent=left+" pergunta(s) sem resposta";
-      if(!left) document.getElementById("questionsList").innerHTML='<div class="empty">Nenhuma pergunta pendente 🎉</div>';
-    },1000);
+    setTimeout(()=>{ loadQuestions(); },1000);
   }catch(e){
     alert("Falha de conexão: "+e.message);
     btn.disabled=false; btn.textContent=original;
