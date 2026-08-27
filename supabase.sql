@@ -1,6 +1,7 @@
 -- ============================================================
 --  Kaixeiro · Bancada de Envios — schema Supabase
---  Rode isto no SQL Editor do Supabase (uma vez).
+--  Rode isto no SQL Editor do Supabase (uma vez). É seguro rodar de novo:
+--  todas as tabelas usam "if not exists", então as que já existem não são afetadas.
 -- ============================================================
 
 -- 1) Tokens do Mercado Livre (uma linha só, id = 'kaixeiro').
@@ -16,7 +17,7 @@ create table if not exists ml_tokens (
 create table if not exists packing_orders (
   shipment_id        text primary key,
   order_id           text,
-  produto            text,
+  produto             text,
   quantidade         integer,
   foto               text,          -- URL da foto do produto (mesma do anúncio ML)
   tipo               text,          -- "Flex" | "Agência / Ponto de coleta" | "Full"
@@ -38,8 +39,23 @@ create table if not exists notified_orders (
   notified_at  timestamptz default now()
 );
 
--- 4) RLS: as funções serverless usam a SERVICE ROLE KEY, que ignora RLS.
+-- 4) Rascunhos de resposta das perguntas do ML.
+--    api/questions.js gera o rascunho (via Claude) e salva aqui na 1ª vez que vê a
+--    pergunta; api/answer.js atualiza pra "enviado" quando o operador manda de verdade.
+create table if not exists question_drafts (
+  question_id      text primary key,
+  item_id          text,
+  pergunta         text,
+  rascunho         text,
+  status           text default 'rascunho',   -- rascunho | enviado
+  resposta_enviada text,
+  gerado_em        timestamptz default now(),
+  enviado_em       timestamptz
+);
+
+-- 5) RLS: as funções serverless usam a SERVICE ROLE KEY, que ignora RLS.
 --    Mantemos RLS ligada e SEM políticas públicas, então o anon key não acessa nada.
 alter table ml_tokens        enable row level security;
 alter table packing_orders   enable row level security;
 alter table notified_orders  enable row level security;
+alter table question_drafts  enable row level security;
