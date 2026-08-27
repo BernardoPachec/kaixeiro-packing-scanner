@@ -149,6 +149,9 @@ module.exports = async (req, res) => {
         foto: item.secure_thumbnail || item.thumbnail || null,
         permalink: item.permalink || null,
         rascunho,
+        // Pergunta presa a um anúncio que já saiu do ar — o ML bloqueia respostas nesse
+        // caso (PolicyAgent), então nem adianta mostrar o botão de enviar como se desse certo.
+        anuncio_removido: !!q.deleted_from_listing,
       };
     });
 

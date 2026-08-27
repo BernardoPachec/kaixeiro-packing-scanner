@@ -110,6 +110,10 @@
     padding:0 14px;font-size:16px;cursor:pointer;font-family:inherit;
   }
   .qcard.enviada{opacity:.5}
+  .aviso-removido{
+    background:rgba(220,38,38,.12);border:1px solid rgba(220,38,38,.4);color:#ff9d9d;
+    border-radius:10px;padding:8px 10px;font-size:13px;line-height:1.4;margin-bottom:10px;
+  }
   .qcard.qcard-respondida{opacity:.85}
   .qcard.qcard-respondida .resposta-enviada{
     background:var(--card2);border-radius:12px;padding:10px;font-size:14px;line-height:1.4;
@@ -414,9 +418,12 @@ async function loadQuestions(){
           </div>
           <div class="texto">${q.texto||""}</div>
           <div class="data">${data}</div>
-          <textarea class="rascunho" placeholder="${placeholder}">${q.rascunho||""}</textarea>
+          ${q.anuncio_removido?'<div class="aviso-removido">⚠️ O anúncio dessa pergunta foi removido do Mercado Livre — não é possível responder (o próprio ML bloqueia).</div>':""}
+          <textarea class="rascunho" placeholder="${placeholder}" ${q.anuncio_removido?"disabled":""}>${q.rascunho||""}</textarea>
           <div class="acoes">
-            <button class="btn btn-primary btn-enviar" onclick="enviarResposta(${q.question_id})">Enviar resposta</button>
+            ${q.anuncio_removido
+              ?'<button class="btn btn-primary btn-enviar" disabled style="opacity:.4;cursor:not-allowed">Não é possível enviar</button>'
+              :`<button class="btn btn-primary btn-enviar" onclick="enviarResposta(${q.question_id})">Enviar resposta</button>`}
             <button class="btn-regenerar" onclick="regenerarRascunho(${q.question_id})" title="Gerar outro rascunho">↻</button>
           </div>
           ${q.permalink?`<a class="abrir" style="margin-top:8px" href="${q.permalink}" target="_blank" rel="noopener">Abrir no Mercado Livre ↗</a>`:""}
