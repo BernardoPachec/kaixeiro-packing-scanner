@@ -3,7 +3,7 @@
 // Ação irreversível pro cliente (a resposta aparece no anúncio na hora) — quem decide
 // mandar é sempre o operador, clicando no botão depois de revisar o texto no app.
 
-const { mlPost, sbUpsert } = require("./_ml");
+const { mlPost, mlFetch, sbUpsert } = require("./_ml");
 
 function readBody(req) {
   return new Promise((resolve) => {
@@ -32,8 +32,29 @@ module.exports = async (req, res) => {
     const r = await mlPost("/answers", { question_id: Number(question_id), text: textoFinal });
     if (r.status !== 200 && r.status !== 201) {
       console.error(`aviso: ML recusou resposta da pergunta ${question_id} (status ${r.status}):`, JSON.stringify(r.data));
+
+      // Quando é bloqueio de política (PolicyAgent), o /answers não diz o motivo real —
+      // só dá pra saber consultando o endpoint oficial de infrações do vendedor.
+      let motivo = r.data?.message || "Mercado Livre recusou a resposta.";
+      if (r.data?.blocked_by === "PolicyAgent") {
+        try {
+          const me = await mlFetch("/users/me");
+          if (me.status === 200 && me.data?.id) {
+            const inf = await mlFetch(
+              `/marketplace/moderations/infractions/${me.data.id}?element_type=QUE&limit=3`
+            );
+            const detalhe = inf.data?.infractions?.[0];
+            if (detalhe?.reason) {
+              motivo = `Bloqueado pelo Mercado Livre: ${detalhe.reason}${detalhe.remedy ? " — " + detalhe.remedy : ""}`;
+            }
+          }
+        } catch (e) {
+          console.error("aviso: falha ao buscar motivo da infração:", e.message);
+        }
+      }
+
       res.statusCode = 502;
-      return res.end(JSON.stringify({ ok: false, error: "Mercado Livre recusou a resposta.", detail: r.data }));
+      return res.end(JSON.stringify({ ok: false, error: motivo, detail: r.data }));
     }
 
     try {
