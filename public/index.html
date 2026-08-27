@@ -146,11 +146,6 @@
     <div id="result"></div>
   </section>
 
-  <!-- ESTOQUE -->
-  <section id="tab-estoque" class="hidden">
-    <div class="empty">Em construção — configuração pendente.</div>
-  </section>
-
   <!-- PERGUNTAS -->
   <section id="tab-questions" class="hidden">
     <div style="display:flex;justify-content:space-between;align-items:center;margin:14px 0 12px">
@@ -177,7 +172,6 @@
 
 <nav class="tabbar" id="mainTabs">
   <button class="active" data-tab="scan" onclick="showTab('scan')" title="Escanear" aria-label="Escanear">📷</button>
-  <button data-tab="estoque" onclick="showTab('estoque')" title="Estoque" aria-label="Estoque">📦</button>
   <button data-tab="questions" onclick="showTab('questions')" title="Perguntas" aria-label="Perguntas">❓</button>
   <button data-tab="full" onclick="showTab('full')" title="Full" aria-label="Full">🏬</button>
 </nav>
@@ -188,7 +182,6 @@ const API = ""; // mesma origem (Vercel)
 function showTab(t){
   document.querySelectorAll("#mainTabs button").forEach(x=>x.classList.toggle("active",x.dataset.tab===t));
   document.getElementById("tab-scan").classList.toggle("hidden",t!=="scan");
-  document.getElementById("tab-estoque").classList.toggle("hidden",t!=="estoque");
   document.getElementById("tab-questions").classList.toggle("hidden",t!=="questions");
   document.getElementById("tab-full").classList.toggle("hidden",t!=="full");
   document.getElementById("tab-result").classList.add("hidden");
@@ -201,7 +194,6 @@ function showResultView(){
   document.querySelector("header").classList.add("hidden");
   document.getElementById("mainTabs").classList.add("hidden");
   document.getElementById("tab-scan").classList.add("hidden");
-  document.getElementById("tab-estoque").classList.add("hidden");
   document.getElementById("tab-questions").classList.add("hidden");
   document.getElementById("tab-full").classList.add("hidden");
   document.getElementById("tab-result").classList.remove("hidden");
