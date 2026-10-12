@@ -298,12 +298,14 @@ module.exports = async (req, res) => {
         return send(res, 200, { ok: true, ...(await enriquecer(String(b.frete))) });
 
       case "conferir": {
+        // delta: quantas unidades foram feitas de uma vez (1 até 9999) ou -1 para desfazer.
         const delta = parseInt(b.delta, 10);
-        if (!b.frete || !b.inv || ![1, -1].includes(delta))
-          return send(res, 400, { ok: false, error: "frete, inv e delta (1 ou -1) são obrigatórios." });
+        if (!b.frete || !b.inv || !(delta === -1 || (delta >= 1 && delta <= 9999)))
+          return send(res, 400, { ok: false, error: "frete, inv e delta (1 a 9999, ou -1) são obrigatórios." });
         const r = await sbRpc("full_conferir", { p_frete: String(b.frete), p_inv: String(b.inv), p_delta: delta });
         const conferidas = Array.isArray(r) ? r[0] : r;
-        await registrarLeitura({ ...b, resultado: b.resultado || (delta > 0 ? "ok" : "desfeito") });
+        await registrarLeitura({ ...b, resultado: b.resultado || (delta > 0 ? "ok" : "desfeito"),
+          detalhe: [clean(b.detalhe), delta > 1 ? `${delta} un.` : null].filter(Boolean).join(" · ") || null });
         return send(res, 200, { ok: true, conferidas });
       }
 

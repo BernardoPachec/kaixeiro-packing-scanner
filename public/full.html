@@ -140,6 +140,12 @@
   .check-item.on .box{background:var(--ok);border-color:var(--ok)}
   .btn-done{height:76px;width:100%;font-size:26px;letter-spacing:.12em}
   .btn-done:disabled{background:var(--s4);border-color:var(--line2);color:var(--dim);opacity:1}
+  .qtd-row{display:flex;gap:8px;align-items:stretch}
+  .qtd-btn{flex:none;width:64px;height:64px;background:#000;border:1px solid var(--line2);color:var(--y);font:600 34px/1 var(--fh);cursor:pointer}
+  .qtd-btn:hover{border-color:var(--y)}
+  .qtd-input{flex:1;min-width:0;height:64px;text-align:center;font:600 32px var(--fh);-moz-appearance:textfield}
+  .qtd-input::-webkit-outer-spin-button,.qtd-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .qtd-tudo{height:64px;font-size:18px}
   .quem-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   .quem-grid button{height:68px;background:#000;border:1px solid var(--line2);color:#fff;font:600 24px var(--fh);letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
   .quem-grid button:hover{border-color:var(--y);color:var(--y)}
@@ -236,6 +242,15 @@
   <div class="mbox">
     <div class="mhead"><span>Quem etiquetou?</span><button onclick="hide('quemModal')" aria-label="Fechar">×</button></div>
     <div class="mbody">
+      <span class="lbl">Quantidade feita</span>
+      <div class="qtd-row">
+        <button class="qtd-btn" onclick="setQtd(S.qtd - 1)" aria-label="Menos">−</button>
+        <input id="qtdInput" class="minput qtd-input" type="number" inputmode="numeric" min="1" oninput="setQtd(this.value, true)">
+        <button class="qtd-btn" onclick="setQtd(S.qtd + 1)" aria-label="Mais">+</button>
+        <button class="btn ghost qtd-tudo" id="qtdTudo" onclick="setQtd(S.qtdMax)">Tudo</button>
+      </div>
+      <span id="qtdInfo" style="font-size:13px;color:var(--muted)"></span>
+      <span class="lbl" style="margin-top:6px">Quem etiquetou</span>
       <div class="quem-grid" id="quemGrid"></div>
       <div style="display:flex;gap:8px">
         <input class="minput" id="quemOutro" placeholder="Outro: digite o nome" style="font-family:var(--fb);font-size:18px;height:56px">
@@ -871,7 +886,18 @@ function togglePasso(k) {
   S.feitos.has(k) ? S.feitos.delete(k) : S.feitos.add(k);
   const y = window.scrollY; renderProduto(S.inv); window.scrollTo(0, y);
 }
+// Quantidade da janela "Quem etiquetou?": de 1 até o que falta do produto ("Tudo").
+function setQtd(v, digitando) {
+  const n = parseInt(v, 10);
+  S.qtd = Math.max(1, Math.min(S.qtdMax, isNaN(n) ? 1 : n));
+  if (!digitando || String(S.qtd) !== String(v)) $("qtdInput").value = S.qtd;
+  $("qtdInfo").textContent = `Falta(m) ${fmt(S.qtdMax)} un. deste produto · vai somar ${fmt(S.qtd)}.`;
+}
 function openQuem() {
+  const it = curItem(); if (!it) return;
+  S.qtdMax = Math.max(1, it.unidades - it.conferidas);
+  setQtd(1);
+  $("qtdTudo").textContent = `Tudo (${fmt(S.qtdMax)})`;
   let ultimo = ""; try { ultimo = localStorage.getItem("kxfull.quem") || ""; $("quemOutro").value = localStorage.getItem("kxfull.outro") || ""; } catch {}
   $("quemGrid").innerHTML = EQUIPE.map((n) => `<button class="${n === ultimo ? "last" : ""}" onclick="pickQuem('${n}')">${n}</button>`).join("");
   show("quemModal");
@@ -913,13 +939,14 @@ async function confirmUnit(responsavel) {
   const btn = document.querySelector(".btn-done"); if (btn) { btn.disabled = true; btn.textContent = "Salvando…"; }
   const passos = passosDe(it).filter((_, k) => (S.feitos || new Set()).has(k));
   try {
-    const r = await api({ acao: "conferir", frete: S.envio.frete, inv: it.inv, delta: 1, codigo_produto: S.prod,
+    const qtd = Math.max(1, Math.min(S.qtd || 1, it.unidades - it.conferidas));
+    const r = await api({ acao: "conferir", frete: S.envio.frete, inv: it.inv, delta: qtd, codigo_produto: S.prod,
       codigo_etiqueta: S.etq, resultado: R.state === "ok" ? "ok" : "sem_leitura", responsavel, passos });
     it.conferidas = r.conferidas;
     S.prod = null; S.etq = null; S.feitos = new Set();
     window.scrollTo(0, 0);
     renderProduto(it.inv);
-    toast(`Unidade ${fmt(it.conferidas)} de ${fmt(it.unidades)} feita por ${responsavel}`, 1800);
+    toast(`${fmt(qtd)} un. feita(s) por ${responsavel} · ${fmt(it.conferidas)} de ${fmt(it.unidades)}`, 2200);
     const modo = modoDe(it);
     if (it.conferidas < it.unidades && pref("reopen", true) && modo !== "universal") openScanner(modo === "kit" ? "etq" : "prod");
     else if (it.conferidas >= it.unidades) beep(true);
