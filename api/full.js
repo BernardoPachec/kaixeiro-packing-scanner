@@ -13,7 +13,9 @@
 // POST /api/full { acao:"enriquecer", frete }          -> foto/MLB/GTIN pela API do ML
 // POST /api/full { acao:"conferir", frete, inv, delta, codigo_produto, codigo_etiqueta, resultado }
 // POST /api/full { acao:"leitura", frete, inv, codigo_produto, codigo_etiqueta, resultado, detalhe }
-// POST /api/full { acao:"checklist", sku, passos:[...] }  -> checklist de embalagem do produto
+// POST /api/full { acao:"checklist", inv, sku, titulo, item_id, kit, passos:[...] }
+//                                     -> checklist da etiqueta (o que vai no anúncio), revisado
+// POST /api/full { acao:"checklists_lote", checklists:[...] }  -> carga inicial (a revisar)
 //      ("conferir" aceita também responsavel e passos: quem embalou e o que foi feito)
 // POST /api/full { acao:"editar", frete, centro?, data_coleta?, status? }
 // POST /api/full { acao:"excluir", frete }
@@ -82,7 +84,13 @@ async function detalhe(frete) {
     const lista = skus.map((s) => `"${s.replace(/"/g, "")}"`).join(",");
     for (const c of await sbSelect("full_checklists", `sku=in.(${enc(lista)})&select=sku,passos`)) checklists[c.sku] = c.passos || [];
   }
-  return { envio, itens, leituras, checklists };
+  // Checklist por etiqueta (prioridade sobre o do SKU): o que vai em cada anúncio.
+  const checklists_etq = {};
+  const invs = itens.map((i) => `"${i.inv}"`).join(",");
+  if (invs) {
+    for (const c of await sbSelect("full_checklists_etq", `inv=in.(${enc(invs)})&select=inv,passos,kit,revisado`)) checklists_etq[c.inv] = c;
+  }
+  return { envio, itens, leituras, checklists, checklists_etq };
 }
 
 // ---- Importar (PDF/CSV já lidos no navegador) ----------------------------------
@@ -225,7 +233,7 @@ async function enriquecer(frete) {
 
 // ---- Leituras e contagem ---------------------------------------------------------
 
-const RESULTADOS = ["ok", "divergente", "manual", "desfeito"];
+const RESULTADOS = ["ok", "sem_leitura", "divergente", "manual", "desfeito"];
 
 async function registrarLeitura(b) {
   if (!RESULTADOS.includes(b.resultado)) return;
@@ -248,6 +256,12 @@ module.exports = async (req, res) => {
     if (req.method === "GET") {
       const url = new URL(req.url, "http://x");
       const frete = url.searchParams.get("frete");
+      const revisados = url.searchParams.get("revisados"); // usado pelo seed_checklists.js
+      if (revisados) {
+        const lista = revisados.split(",").filter((i) => /^[A-Z]{4}\d{5}$/.test(i)).map((i) => `"${i}"`).join(",");
+        const rows = lista ? await sbSelect("full_checklists_etq", `inv=in.(${enc(lista)})&revisado=eq.true&select=inv`) : [];
+        return send(res, 200, { ok: true, revisados: rows.map((r) => r.inv) });
+      }
       if (frete) {
         const d = await detalhe(frete);
         return d ? send(res, 200, { ok: true, ...d }) : send(res, 404, { ok: false, error: "Envio não encontrado." });
@@ -293,12 +307,23 @@ module.exports = async (req, res) => {
         return send(res, 200, { ok: true, conferidas });
       }
 
-      case "checklist": {
-        const sku = clean(b.sku);
-        if (!sku) return send(res, 400, { ok: false, error: "sku é obrigatório." });
-        const passos = (b.passos || []).map((p) => String(p).trim()).filter(Boolean).slice(0, 20);
-        await sbUpsert("full_checklists", [{ sku, passos, atualizado_em: new Date().toISOString() }], "sku");
-        return send(res, 200, { ok: true, passos });
+      case "checklist":
+      case "checklists_lote": {
+        // Um (tela "editar deste anúncio", revisado) ou vários (carga inicial, a revisar).
+        const lote = b.acao === "checklist" ? [{ ...b, revisado: true }] : b.checklists || [];
+        const rows = lote.map((c) => ({
+          inv: clean(c.inv)?.toUpperCase(),
+          item_id: clean(c.item_id),
+          sku: clean(c.sku),
+          titulo: clean(c.titulo),
+          passos: (c.passos || []).map((p) => String(p).trim()).filter(Boolean).slice(0, 30),
+          kit: !!c.kit,
+          revisado: !!c.revisado,
+          atualizado_em: new Date().toISOString(),
+        })).filter((c) => /^[A-Z]{4}\d{5}$/.test(c.inv || ""));
+        if (!rows.length) return send(res, 400, { ok: false, error: "Código ML (inv) inválido." });
+        await sbUpsert("full_checklists_etq", rows, "inv");
+        return send(res, 200, { ok: true, gravados: rows.length, checklist: rows[0] });
       }
 
       case "leitura":

@@ -585,7 +585,7 @@ async function confirmImport() {
 // ---------- Tela 02: produtos do envio ----------
 async function loadEnvio(frete) {
   const d = await apiGet("?frete=" + encodeURIComponent(frete));
-  S.envio = d.envio; S.itens = d.itens; S.leituras = d.leituras; S.checklists = d.checklists || {};
+  S.envio = d.envio; S.itens = d.itens; S.leituras = d.leituras; S.checklists = d.checklists || {}; S.checklistsEtq = d.checklists_etq || {};
 }
 function itemStatus(it) {
   if (it.conferidas >= it.unidades) return ["Conferido", "var(--ok)"];
@@ -638,6 +638,7 @@ function renderEnvio() {
               <span style="font-size:16px;font-weight:600;line-height:1.3">${esc(it.titulo)}</span>
               <div style="display:flex;gap:6px;flex-wrap:wrap">
                 <span class="chip ${precisaEtiqueta(it) ? "y" : ""}">${precisaEtiqueta(it) ? "ETIQUETAGEM" : "CÓDIGO UNIVERSAL"}</span>
+                ${ckEtq(it)?.kit ? `<span class="chip y">KIT · ${passosDe(it).length} ITENS</span>` : ""}
                 ${it.ean ? "" : '<span class="chip">SEM EAN</span>'}
                 ${(it.tags || []).map((t) => `<span class="chip">${esc(t)}</span>`).join("")}
               </div>
@@ -694,11 +695,12 @@ async function delEnvio() {
 function curItem() { return S.itens.find((i) => i.inv === S.inv); }
 
 function renderProduto(inv) {
-  if (S.inv !== inv) { S.inv = inv; S.prod = null; S.etq = null; S.manualProd = false; S.feitos = new Set(); }
+  if (S.inv !== inv) { S.inv = inv; S.prod = null; S.etq = null; S.feitos = new Set(); }
   const it = curItem(), e = S.envio, F = encodeURIComponent(e.frete);
   if (!it) { $("view").innerHTML = `<main class="narrow"><div class="err">Código ML ${esc(inv)} não está no envio #${esc(e.frete)}.</div><a href="#/envio/${F}">← Voltar ao envio</a></main>`; return; }
   crumb([{ t: "Envios", href: "#/" }, { t: "#" + e.frete, href: "#/envio/" + F }, { t: it.sku || it.inv }]);
-  const needEtq = precisaEtiqueta(it);
+  // universal: o ML lê o EAN, só checklist · kit: mais de um item, sem leitura de produto · normal
+  const modo = modoDe(it);
   const R = evaluate(it);
   const ring = (filled, wrong) => !filled ? Y : wrong ? "var(--bad)" : R.state === "ok" ? "var(--ok)" : "#fff";
   const full = it.conferidas >= it.unidades;
@@ -725,33 +727,37 @@ function renderProduto(inv) {
       </div>
     </section>
 
-    <section class="slots">
+    ${modo === "universal" ? `
+    <div class="notice">${ICON.info}<span>Produto identificado por <b style="color:${Y}">código universal</b>: o ML lê o EAN e não leva etiqueta. Basta seguir o checklist.</span></div>` : `
+    <section class="slots" ${modo === "kit" ? 'style="grid-template-columns:1fr"' : ""}>
+      ${modo === "kit" ? "" : `
       <div class="slot">
-        <button class="circle" style="border-color:${ring(S.prod || S.manualProd, R.prodWrong)}" onclick="openScanner('prod')" ${full ? "disabled" : ""}>
-          <span style="color:${ring(S.prod || S.manualProd, R.prodWrong)};display:flex">${ICON.barcode}</span>
+        <button class="circle" style="border-color:${ring(S.prod, R.prodWrong)}" onclick="openScanner('prod')" ${full ? "disabled" : ""}>
+          <span style="color:${ring(S.prod, R.prodWrong)};display:flex">${ICON.barcode}</span>
           <b>Produto</b><small>EAN ou SKU</small>
         </button>
-        <div class="read"><small>Lido</small><span style="color:${S.prod || S.manualProd ? "#fff" : "#444"}">${esc(S.manualProd ? "conferido no olho" : S.prod || "—")}</span></div>
+        <div class="read"><small>Lido</small><span style="color:${S.prod ? "#fff" : "#444"}">${esc(S.prod || "—")}</span></div>
       </div>
-      <div class="compare">${ICON.swap}<span class="lbl" style="font-size:11px">Comparar</span></div>
+      <div class="compare">${ICON.swap}<span class="lbl" style="font-size:11px">Comparar</span></div>`}
       <div class="slot">
-        <button class="circle" style="border-color:${needEtq ? ring(S.etq, R.etqWrong) : "#444"}" onclick="openScanner('etq')" ${!needEtq || full ? "disabled" : ""}>
-          <span style="color:${needEtq ? ring(S.etq, R.etqWrong) : "#555"};display:flex">${ICON.tag}</span>
-          <b>Etiqueta</b><small>${needEtq ? "Código ML colado" : "Não leva: o ML lê o EAN"}</small>
+        <button class="circle" style="border-color:${ring(S.etq, R.etqWrong)}" onclick="openScanner('etq')" ${full ? "disabled" : ""}>
+          <span style="color:${ring(S.etq, R.etqWrong)};display:flex">${ICON.tag}</span>
+          <b>Etiqueta</b><small>${modo === "kit" ? "Opcional no kit" : "Código ML colado"}</small>
         </button>
-        <div class="read"><small>Lido</small><span style="color:${S.etq ? "#fff" : "#444"}">${esc(needEtq ? S.etq || "—" : "dispensada")}</span></div>
+        <div class="read"><small>Lido</small><span style="color:${S.etq ? "#fff" : "#444"}">${esc(S.etq || "—")}</span></div>
       </div>
-    </section>
+    </section>`}
 
+    ${modo !== "universal" || R.state === "full" ? `
     <section class="result" style="border-color:${R.border};background:${R.bg}">
       <span class="dot" style="background:${R.dot};color:${R.dotFg}">${R.glyph}</span>
       <div class="txt"><span class="t" style="color:${R.titleColor}">${esc(R.title)}</span><span class="d">${R.text}</span></div>
       ${R.state === "bad" || R.state === "ok" ? `<button class="btn white" onclick="resetReads()">Ler de novo</button>` : ""}
       ${R.state === "full" && prox ? `<button class="btn" onclick="go('#/envio/${F}/${prox.inv}')">Próximo pendente</button>` : ""}
       ${R.state === "full" && !prox ? `<button class="btn" onclick="go('#/envio/${F}')">Ver envio</button>` : ""}
-    </section>
+    </section>` : ""}
 
-    ${R.state === "ok" ? checklistHtml(it) : ""}
+    ${full ? "" : checklistHtml(it, R)}
 
     <div class="counter">
       <span style="white-space:nowrap;font-size:14px;color:var(--muted)">Conferidas <strong>${fmt(it.conferidas)}</strong> de ${fmt(it.unidades)}</span>
@@ -760,7 +766,6 @@ function renderProduto(inv) {
 
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
       ${it.conferidas > 0 ? `<button class="btn quiet sm" onclick="undoUnit()">Desfazer 1 unidade</button>` : ""}
-      ${!full && !it.ean && !(it.gtins || []).length && !S.prod && !S.manualProd ? `<button class="btn quiet sm" onclick="manualProduct()">Produto sem código: conferi no olho</button>` : ""}
     </div>
 
     <div class="toggles">
@@ -771,10 +776,12 @@ function renderProduto(inv) {
 }
 
 function evaluate(it) {
-  const needEtq = precisaEtiqueta(it);
-  const pOk = S.manualProd || (S.prod && productMatches(it, S.prod));
+  const modo = modoDe(it);
+  const needEtq = modo !== "universal";
+  const needProd = modo === "normal";               // kit: não tem um código só de produto
+  const pOk = !needProd || (S.prod && productMatches(it, S.prod));
   const eOk = !needEtq || (S.etq && labelCode(S.etq) === it.inv);
-  const prodWrong = !!S.prod && !S.manualProd && !productMatches(it, S.prod);
+  const prodWrong = needProd && !!S.prod && !productMatches(it, S.prod);
   const etqWrong = needEtq && !!S.etq && labelCode(S.etq) !== it.inv;
   const base = { prodWrong, etqWrong };
   if (it.conferidas >= it.unidades)
@@ -785,19 +792,19 @@ function evaluate(it) {
     if (etqWrong) { const o = findByLabel(S.etq).filter((x) => x.inv !== it.inv); quem.push(o.length ? `A etiqueta é de <b>${esc(o[0].titulo)}</b> (${esc(o[0].inv)}).` : `A etiqueta (${esc(labelCode(S.etq))}) não pertence a este envio.`); }
     return { ...base, state: "bad", border: "var(--bad)", bg: "var(--badbg)", dot: "var(--bad)", dotFg: "#000", glyph: "!", titleColor: "var(--badtxt)", title: "Não confere", text: quem.join(" ") + " Separe a unidade e confira." };
   }
-  if (pOk && eOk)
-    return { ...base, state: "ok", border: "var(--ok)", bg: "var(--okbg)", dot: "var(--ok)", dotFg: "#000", glyph: "✓", titleColor: "var(--ok)", title: "Mesmo produto", text: (needEtq ? "Produto e etiqueta batem." : "Código universal confere (este produto não leva etiqueta).") + " Pode embalar: siga o checklist abaixo." };
-  if (S.prod || S.manualProd || S.etq)
-    return { ...base, state: "half", border: Y, bg: "transparent", dot: Y, dotFg: "#000", glyph: "1", titleColor: Y, title: "Falta uma leitura", text: S.etq ? "Etiqueta lida. Agora leia o código do produto." : "Produto lido. Cole a etiqueta do ML e leia a etiqueta." };
-  return { ...base, state: "idle", border: "var(--line2)", bg: "transparent", dot: "var(--s4)", dotFg: "var(--muted)", glyph: "?", titleColor: "#fff", title: "Aguardando leitura",
-    text: needEtq ? "Leia o código do produto, cole a etiqueta do ML e leia a etiqueta." : "Leia o código universal (EAN) do produto." };
+  const leu = (needProd && S.prod) || (needEtq && S.etq);
+  if (leu && pOk && eOk)
+    return { ...base, state: "ok", border: "var(--ok)", bg: "var(--okbg)", dot: "var(--ok)", dotFg: "#000", glyph: "✓", titleColor: "var(--ok)", title: modo === "kit" ? "Etiqueta confere" : "Mesmo produto", text: (modo === "kit" ? "Etiqueta do kit certa." : "Produto e etiqueta batem.") + " Siga o checklist abaixo." };
+  if (leu)
+    return { ...base, state: "half", border: Y, bg: "transparent", dot: Y, dotFg: "#000", glyph: "1", titleColor: Y, title: "Falta uma leitura", text: S.etq ? "Etiqueta lida. Leia o código do produto (ou siga o checklist)." : "Produto lido. Cole a etiqueta do ML e leia a etiqueta (ou siga o checklist)." };
+  return { ...base, state: "idle", border: "var(--line2)", bg: "transparent", dot: "var(--s4)", dotFg: "var(--muted)", glyph: "?", titleColor: "#fff", title: modo === "kit" ? "Kit: confira item por item" : "Leitura opcional",
+    text: modo === "kit" ? "Este anúncio tem mais de um item: marque cada um no checklist. Ler a etiqueta do kit é opcional." : "Leia o produto e a etiqueta para conferir, ou siga direto o checklist." };
 }
 
 let busy = false;
 async function onRead(slot, code) {
   const it = curItem(); if (!it) return;
-  if (slot === "prod") { S.prod = norm(code); S.manualProd = false; } else S.etq = norm(code);
-  S.feitos = new Set(); // leitura nova = unidade nova: checklist começa do zero
+  if (slot === "prod") S.prod = norm(code); else S.etq = norm(code);
   const R = evaluate(it);
   if (R.state === "bad") {
     beep(false);
@@ -814,34 +821,49 @@ async function onRead(slot, code) {
   beep(true);
   renderProduto(it.inv);
   // Falta a outra leitura: abre o scanner direto nela.
-  const next = !S.prod && !S.manualProd ? "prod" : precisaEtiqueta(it) && !S.etq ? "etq" : null;
+  const modo = modoDe(it);
+  const next = modo === "normal" && !S.prod ? "prod" : modo !== "universal" && !S.etq ? "etq" : null;
   if (next) openScanner(next);
 }
 
 // ---------- Checklist da embalagem + quem etiquetou ----------
-// Bater produto e etiqueta só libera a embalagem. A unidade só conta depois do checklist
-// completo, de "Marcar como feito" e de escolher quem etiquetou.
-// Passos padrão até cada produto ganhar o seu ("editar deste produto").
+// O checklist e o botão "Marcar como feito" ficam sempre na tela: a leitura dos códigos é
+// opcional (kit não tem um código só). A unidade conta depois do checklist completo, do botão
+// e de escolher quem etiquetou. Só uma leitura ERRADA (vermelho) trava o botão.
+//
+// O checklist é por ETIQUETA (Código ML), não por SKU: anúncios com o mesmo SKU podem levar
+// coisas diferentes (pistola com e sem bicos, cera com e sem flanela). Ordem de busca:
+// etiqueta (full_checklists_etq) → SKU (full_checklists, antigo) → passos padrão.
 const PASSOS_PADRAO = ["Colocar batoque", "Colocar etiqueta de batoque", "Passar fita", "Colocar flanela"];
 const EQUIPE = ["Douglas", "Ber", "Wilson", "Cássia", "Giulia"];
-const passosDe = (it) => (it.sku && S.checklists && S.checklists[it.sku]) || PASSOS_PADRAO;
+const ckEtq = (it) => (S.checklistsEtq || {})[it.inv] || null;
+const passosDe = (it) => ckEtq(it)?.passos || (it.sku && (S.checklists || {})[it.sku]) || PASSOS_PADRAO;
+function modoDe(it) {
+  if (/universal/i.test(it.identificacao || "")) return "universal";
+  if (ckEtq(it)?.kit) return "kit";
+  return "normal";
+}
 
-function checklistHtml(it) {
+function checklistHtml(it, R) {
   const passos = passosDe(it), feitos = S.feitos || new Set();
   const todos = passos.every((_, k) => feitos.has(k));
-  const proprio = it.sku && S.checklists && S.checklists[it.sku];
+  const ck = ckEtq(it), proprio = ck || (it.sku && (S.checklists || {})[it.sku]);
+  const travado = R && R.state === "bad";
+  const titulo = ck?.kit ? "O que vai neste anúncio" : "Checklist da embalagem";
   return `
     <section class="check">
       <div class="check-head">
-        <span class="eyebrow">Checklist da embalagem${proprio ? "" : " · padrão"}</span>
-        <a href="javascript:editChecklist()">editar deste produto</a>
+        <span class="eyebrow">${titulo}${proprio ? "" : " · padrão"}</span>
+        <a href="javascript:editChecklist()">editar deste anúncio</a>
       </div>
+      ${ck && !ck.revisado ? `<span style="font-size:12px;color:var(--y)">Montado a partir da descrição do anúncio. Confira na primeira vez e salve em "editar" para marcar como revisado.</span>` : ""}
       ${passos.length ? passos.map((p, k) => `
         <button class="check-item ${feitos.has(k) ? "on" : ""}" onclick="togglePasso(${k})">
           <span class="box">${feitos.has(k) ? "✓" : ""}</span><span>${esc(p)}</span>
-        </button>`).join("") : '<p style="margin:0;color:var(--muted)">Este produto não tem passos de embalagem.</p>'}
-      <button class="btn btn-done" ${todos ? "" : "disabled"} onclick="openQuem()">Marcar como feito</button>
-      ${todos ? "" : `<span style="font-size:13px;color:var(--muted);text-align:center">Marque ${passos.length - feitos.size} passo(s) para liberar.</span>`}
+        </button>`).join("") : '<p style="margin:0;color:var(--muted)">Este anúncio não tem passos de embalagem.</p>'}
+      <button class="btn btn-done" ${todos && !travado ? "" : "disabled"} onclick="openQuem()">Marcar como feito</button>
+      ${travado ? `<span style="font-size:13px;color:var(--badtxt);text-align:center">Leitura errada: separe a unidade e toque em "Ler de novo".</span>`
+        : todos ? "" : `<span style="font-size:13px;color:var(--muted);text-align:center">Marque ${passos.length - feitos.size} item(ns) para liberar.</span>`}
     </section>`;
 }
 function togglePasso(k) {
@@ -863,38 +885,43 @@ function pickQuem(nome) {
 }
 function editChecklist() {
   const it = curItem(); if (!it) return;
-  if (!it.sku) return toast("Este produto não tem SKU para guardar o checklist.");
+  const ck = ckEtq(it);
   IMP = {};
   $("impBody").innerHTML = `
-    <p style="margin:0;font-size:14px;color:#cfcfcf">Passos de embalagem do <b class="mono">${esc(it.sku)}</b>, um por linha. Valem para todos os envios deste SKU. Deixe vazio se o produto não precisa de nada.</p>
-    <textarea id="ckText" class="minput" style="height:200px;padding:10px;font-family:var(--fb);font-size:16px;line-height:1.5">${esc(passosDe(it).join("\n"))}</textarea>
-    <button class="btn" id="ckGo" onclick="saveChecklist()">Salvar checklist</button>`;
+    <p style="margin:0;font-size:14px;color:#cfcfcf">Itens e passos da etiqueta <b class="mono">${esc(it.inv)}</b>, um por linha. Vale <b>só para este anúncio</b> (outros anúncios com o mesmo SKU têm o checklist deles). Deixe vazio se não precisa de nada.</p>
+    <textarea id="ckText" class="minput" style="height:220px;padding:10px;font-family:var(--fb);font-size:16px;line-height:1.5">${esc(passosDe(it).join("\n"))}</textarea>
+    <label style="display:flex;gap:10px;align-items:center;font-size:14px;color:#cfcfcf"><input type="checkbox" id="ckKit" ${ck?.kit ? "checked" : ""} style="width:18px;height:18px;accent-color:var(--y)"> Anúncio com mais de um item (kit): sem leitura do código do produto</label>
+    <button class="btn" id="ckGo" onclick="saveChecklist()">Salvar e marcar como revisado</button>`;
   show("impModal");
 }
 async function saveChecklist() {
   const it = curItem(), btn = $("ckGo");
   btn.disabled = true; btn.textContent = "Salvando…";
   try {
-    const r = await api({ acao: "checklist", sku: it.sku, passos: $("ckText").value.split("\n") });
-    S.checklists = { ...(S.checklists || {}), [it.sku]: r.passos };
-    S.feitos = new Set(); closeImport(); renderProduto(it.inv); toast("Checklist salvo.");
+    const r = await api({ acao: "checklist", inv: it.inv, sku: it.sku, titulo: it.titulo, item_id: it.item_id,
+      kit: $("ckKit").checked, passos: $("ckText").value.split("\n") });
+    S.checklistsEtq = { ...(S.checklistsEtq || {}), [it.inv]: r.checklist };
+    S.feitos = new Set(); closeImport(); renderProduto(it.inv); toast("Checklist salvo para esta etiqueta.");
   } catch (e) { btn.disabled = false; btn.textContent = "Tentar de novo"; toast(e.message, 5000); }
 }
 
 async function confirmUnit(responsavel) {
   const it = curItem(); if (!it || busy) return;
+  const R = evaluate(it);
+  if (R.state === "bad") return toast("Leitura errada: toque em \"Ler de novo\" antes.");
   busy = true;
   const btn = document.querySelector(".btn-done"); if (btn) { btn.disabled = true; btn.textContent = "Salvando…"; }
   const passos = passosDe(it).filter((_, k) => (S.feitos || new Set()).has(k));
   try {
-    const r = await api({ acao: "conferir", frete: S.envio.frete, inv: it.inv, delta: 1, codigo_produto: S.manualProd ? "(visual)" : S.prod,
-      codigo_etiqueta: S.etq, resultado: S.manualProd ? "manual" : "ok", responsavel, passos });
+    const r = await api({ acao: "conferir", frete: S.envio.frete, inv: it.inv, delta: 1, codigo_produto: S.prod,
+      codigo_etiqueta: S.etq, resultado: R.state === "ok" ? "ok" : "sem_leitura", responsavel, passos });
     it.conferidas = r.conferidas;
-    S.prod = null; S.etq = null; S.manualProd = false; S.feitos = new Set();
+    S.prod = null; S.etq = null; S.feitos = new Set();
     window.scrollTo(0, 0);
     renderProduto(it.inv);
     toast(`Unidade ${fmt(it.conferidas)} de ${fmt(it.unidades)} feita por ${responsavel}`, 1800);
-    if (it.conferidas < it.unidades && pref("reopen", true)) openScanner("prod");
+    const modo = modoDe(it);
+    if (it.conferidas < it.unidades && pref("reopen", true) && modo !== "universal") openScanner(modo === "kit" ? "etq" : "prod");
     else if (it.conferidas >= it.unidades) beep(true);
   } catch (e) { toast("Não somou: " + e.message, 5000); renderProduto(it.inv); }
   busy = false;
@@ -906,20 +933,16 @@ async function undoUnit() {
     it.conferidas = r.conferidas; renderProduto(it.inv);
   } catch (e) { toast(e.message, 5000); }
 }
-function resetReads() { S.prod = null; S.etq = null; S.manualProd = false; S.feitos = new Set(); renderProduto(S.inv); }
-function manualProduct() {
-  if (!confirm("Este produto não tem EAN no PDF nem no anúncio. Confirma que conferiu pelo nome/foto que é este produto?")) return;
-  S.manualProd = true; renderProduto(S.inv);
-  if (precisaEtiqueta(curItem()) && !S.etq) openScanner("etq");
-}
+function resetReads() { S.prod = null; S.etq = null; renderProduto(S.inv); }
 
 // "Achar o produto" na Tela 02: aceita etiqueta ou código do produto e já deixa a leitura preenchida.
 function onFind(code) {
   const F = encodeURIComponent(S.envio.frete);
   const byL = findByLabel(code), byP = findByProduct(code);
   const open = (it, slot) => {
-    S.inv = it.inv; S.prod = slot === "prod" ? norm(code) : null; S.etq = slot === "etq" ? norm(code) : null; S.manualProd = false;
-    S.openNext = slot === "etq" ? "prod" : precisaEtiqueta(it) ? "etq" : null; // já abre a leitura que falta
+    S.inv = it.inv; S.prod = slot === "prod" ? norm(code) : null; S.etq = slot === "etq" ? norm(code) : null; S.feitos = new Set();
+    const m = modoDe(it); // já abre a leitura que falta
+    S.openNext = slot === "etq" ? (m === "normal" ? "prod" : null) : m !== "universal" ? "etq" : null;
     beep(true); location.hash = `#/envio/${F}/${it.inv}`;
   };
   if (byL.length) return open(byL[0], "etq");
@@ -1003,7 +1026,7 @@ document.addEventListener("keydown", (ev) => {
     if (parts[3]) {
       const it = curItem();
       const isLabel = /[A-Z]{4}\d{5}/.test(norm(code));
-      onRead(isLabel && precisaEtiqueta(it) ? "etq" : "prod", code);
+      if (modoDe(it) !== "universal") onRead(isLabel ? "etq" : "prod", code);
     } else if (parts[2]) onFind(code);
     return;
   }

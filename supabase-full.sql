@@ -81,3 +81,20 @@ alter table full_checklists enable row level security;
 -- 7) Em cada unidade feita: quem etiquetou e quais passos foram marcados.
 alter table full_leituras add column if not exists responsavel text;
 alter table full_leituras add column if not exists passos text[];
+
+-- ============================================================
+--  Adição de 12/10/2026 (2): checklist por ETIQUETA (Código ML)
+--  Anúncios com o mesmo SKU podem levar coisas diferentes (pistola com e sem bicos),
+--  então o checklist que vale é o da etiqueta. O de SKU (item 6) fica como reserva.
+-- ============================================================
+create table if not exists full_checklists_etq (
+  inv            text primary key,              -- Código ML / inventory_id
+  item_id        text,                          -- MLB do anúncio
+  sku            text,
+  titulo         text,
+  passos         text[] not null default '{}',  -- o que vai no pacote, um item por linha
+  kit            boolean default false,         -- mais de um item: sem leitura do produto
+  revisado       boolean default false,         -- false = montado da descrição, a conferir
+  atualizado_em  timestamptz default now()
+);
+alter table full_checklists_etq enable row level security;
