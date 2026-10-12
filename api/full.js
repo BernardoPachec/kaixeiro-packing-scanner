@@ -8,6 +8,8 @@
 // GET  /api/full?frete=<n>            -> envio + linhas
 // POST /api/full { acao:"importar", frete, origem, centro, data_coleta, total_produtos,
 //                  total_unidades, itens:[{inv,ean,sku,titulo,tags,unidades,identificacao,instrucoes}] }
+// POST /api/full { acao:"cabecalhos", envios:[{frete,centro,data_coleta,total_unidades,status}] }
+//                                                      -> lista da tela "Gestão de envios Full"
 // POST /api/full { acao:"enriquecer", frete }          -> foto/MLB/GTIN pela API do ML
 // POST /api/full { acao:"conferir", frete, inv, delta, codigo_produto, codigo_etiqueta, resultado }
 // POST /api/full { acao:"leitura", frete, inv, codigo_produto, codigo_etiqueta, resultado, detalhe }
@@ -55,7 +57,8 @@ async function listar() {
     return {
       ...e,
       produtos: linhas.length,
-      declaradas: linhas.reduce((a, i) => a + i.unidades, 0),
+      // Envio que veio só da lista do ML (sem produtos ainda): usa o total da tela.
+      declaradas: linhas.length ? linhas.reduce((a, i) => a + i.unidades, 0) : e.total_unidades || 0,
       conferidas: linhas.reduce((a, i) => a + i.conferidas, 0),
       divergencias: comDivergencia.has(e.frete),
     };
@@ -247,6 +250,24 @@ module.exports = async (req, res) => {
     switch (b.acao) {
       case "importar":
         return send(res, 200, { ok: true, ...(await importar(b)) });
+
+      case "cabecalhos": {
+        // Lista lida da tela "Gestão de envios Full" (botão do ML): só cabeçalho, sem produtos.
+        const agora = new Date().toISOString();
+        const rows = (b.envios || [])
+          .filter((e) => /^\d{6,12}$/.test(String(e.frete || "")))
+          .map((e) => ({
+            frete: String(e.frete),
+            centro: clean(e.centro),
+            data_coleta: clean(e.data_coleta),
+            total_unidades: parseInt(e.total_unidades, 10) || null,
+            status: e.status === "despachado" ? "despachado" : "preparacao",
+            atualizado_em: agora,
+          }));
+        if (!rows.length) return send(res, 400, { ok: false, error: "Nenhum envio válido." });
+        await sbUpsert("full_envios", rows, "frete");
+        return send(res, 200, { ok: true, gravados: rows.length });
+      }
 
       case "enriquecer":
         return send(res, 200, { ok: true, ...(await enriquecer(String(b.frete))) });

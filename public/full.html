@@ -16,6 +16,7 @@
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="full-pdf.js"></script>
+<script src="full-ml.js"></script>
 <style>
   /* Identidade Kaixeiro: preto, amarelo #F3AA07 e branco. Verde e vermelho só como sinal
      de status (confere / não confere), conforme o protótipo do Claude Design. */
@@ -305,6 +306,13 @@ const S = {
 window.addEventListener("hashchange", route);
 async function route() {
   closeScanner();
+  if (location.hash.startsWith("#/ml=")) {
+    const raw = decodeURIComponent(location.hash.slice(5));
+    history.replaceState(null, "", location.pathname + "#/"); // não reimporta ao recarregar
+    try { await loadEnvios(); } catch {}
+    renderLista();
+    return handleMlPayload(raw);
+  }
   const parts = location.hash.replace(/^#\/?/, "").split("/").filter(Boolean).map(decodeURIComponent);
   try {
     if (parts[0] === "envio" && parts[1]) {
@@ -340,7 +348,10 @@ function renderLista() {
         <h1 class="h1">Envios Full</h1>
         <p class="sub">Escolha um envio para montar e conferir as unidades.</p>
       </div>
-      <button class="btn" onclick="openImport()">Importar PDF do frete</button>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn ghost" onclick="openMlHelp()">Botão do ML (teste)</button>
+        <button class="btn" onclick="openImport()">Importar PDF do frete</button>
+      </div>
     </div>
     <div class="kpis">
       <div><b>${prep.length}</b><span>Envios em preparação</span></div>
@@ -433,10 +444,19 @@ async function readImport(file) {
     if (!r.itens.length) throw new Error("Não achei nenhuma linha de produto nesse arquivo.");
     if (IMP.reFrete && r.frete && r.frete !== IMP.reFrete && r.origem === "pdf")
       r.avisos.unshift(`Esse PDF é do frete #${r.frete}, não do #${IMP.reFrete}. Ele vai entrar como um envio separado.`);
+    renderImpPreview(r);
+  } catch (e) {
+    prev.innerHTML = `<div class="err">${esc(e.message)}</div>`;
+  }
+}
+
+function renderImpPreview(r) {
+    const prev = $("impPrev");
     IMP.data = r;
     const ex = S.envios.find((e) => e.frete === r.frete) || (S.envio && S.envio.frete === r.frete ? S.envio : null);
     const unid = r.itens.reduce((a, i) => a + i.unidades, 0);
     prev.innerHTML = `
+      ${r.origem === "ml" ? `<div class="codes" style="grid-template-columns:1fr"><div><small>Produtos lidos da tela do ML (teste): confira antes de importar</small><span style="font-family:var(--fb);font-size:13px">${r.itens.map((i) => `${esc(i.inv)} · ${esc(i.sku || "sem SKU")} · <b>${fmt(i.unidades)} un.</b> · ${esc(i.titulo).slice(0, 50)}`).join("<br>")}</span></div></div>` : ""}
       <div class="codes" style="grid-template-columns:repeat(3,minmax(0,1fr))">
         <div><small>Frete</small><span>${esc(r.frete || "—")}</span></div>
         <div><small>Produtos</small><span>${r.itens.length}</span></div>
@@ -450,9 +470,63 @@ async function readImport(file) {
         <div class="field"><span class="lbl">Centro logístico</span><input id="impCentro" placeholder="ex.: BRSP06" value="${esc(ex?.centro || "")}"></div>
       </div>
       <button class="btn" id="impGo" onclick="confirmImport()">Importar ${r.itens.length} produtos</button>`;
-  } catch (e) {
-    prev.innerHTML = `<div class="err">${esc(e.message)}</div>`;
+}
+
+// ---------- Botão do ML (TESTE) ----------
+// Favorito que roda na tela do Seller Center: pega o texto visível e abre o scanner com ele no
+// fragmento da URL (#/ml=...). O fragmento não vai para servidor nenhum. A leitura é de
+// full-ml.js, então dá para corrigir sem reinstalar o favorito.
+function bookmarkletHref() {
+  const target = location.origin + location.pathname;
+  const code = `(function(){var d={u:location.href,t:document.body.innerText.slice(0,180000)};` +
+    `window.open(${JSON.stringify(target)}+'#/ml='+encodeURIComponent(JSON.stringify(d)),'kxscanner');})();`;
+  return "javascript:" + encodeURIComponent(code); // "#" sem escape cortaria o favorito
+}
+function openMlHelp() {
+  IMP = {};
+  $("impBody").innerHTML = `
+    <div class="warn">Versão de <b>teste</b>. O ML não tem API pública de envios Full, então o botão lê a tela que você já tem aberta e logada. Nada é alterado no Mercado Livre.</div>
+    <p style="margin:0;font-size:14px;color:#cfcfcf"><b>1.</b> Arraste o botão abaixo para a barra de favoritos do Chrome (Ctrl+Shift+B mostra a barra):</p>
+    <p style="margin:0"><a class="btn" href="${bookmarkletHref()}" onclick="event.preventDefault();toast('Arraste para a barra de favoritos, não clique aqui.')">Enviar ao Scanner</a></p>
+    <p style="margin:0;font-size:14px;color:#cfcfcf"><b>2.</b> No Seller Center, abra <b>Gestão de envios Full</b> e clique no favorito: os envios (número, data, centro e status) entram aqui.</p>
+    <p style="margin:0;font-size:14px;color:#cfcfcf"><b>3.</b> Para os produtos, abra o envio no ML (<i>Conferir detalhes</i> / editar produtos) e clique de novo: aparece uma prévia para conferir antes de gravar.</p>
+    <p style="margin:0;font-size:12px;color:var(--dim)">Se a leitura vier errada, o PDF do frete continua valendo. Me mande um print da tela do ML para eu ajustar.</p>`;
+  show("impModal");
+}
+async function handleMlPayload(raw) {
+  let p;
+  try { p = JSON.parse(raw); } catch { return toast("Não consegui ler os dados enviados pelo botão do ML.", 5000); }
+  const r = KxFullML.parse(p);
+  IMP = {};
+  if (r.tipo === "produtos") {
+    if (!r.itens.length) return toast("Achei a tela de produtos, mas nenhuma linha com Código ML.", 5000);
+    r.origem = "ml";
+    $("impBody").innerHTML = '<div id="impPrev"></div>';
+    show("impModal");
+    return renderImpPreview(r);
   }
+  if (r.tipo === "lista") {
+    IMP.lista = r.envios;
+    $("impBody").innerHTML = `
+      <div class="warn">Lido da tela "Gestão de envios Full" (teste). Confira antes de gravar.</div>
+      <div class="table">${r.envios.map((e) => `
+        <div style="display:flex;justify-content:space-between;gap:10px;padding:10px 12px;border-bottom:1px solid #1c1c1c;font-size:14px;flex-wrap:wrap">
+          <span><b class="mono">#${esc(e.frete)}</b> ${e.inconformidade ? '<span class="flag">Inconformidade</span>' : ""}<br><span style="color:var(--muted);font-size:12px">${esc(e.data_coleta || "sem data")} · ${esc(e.centro || "")}</span></span>
+          <span style="text-align:right">${e.total_unidades != null ? fmt(e.total_unidades) + " un." : "—"}<br><span style="color:${e.status === "despachado" ? "var(--muted)" : Y};font-size:12px">${esc(e.status_ml || "")}</span></span>
+        </div>`).join("")}</div>
+      <p style="margin:0;font-size:13px;color:var(--muted)">Grava número, data, centro e status. Os produtos de cada envio entram depois (botão na tela do envio no ML, ou PDF).</p>
+      <button class="btn" id="mlGo" onclick="confirmMlLista()">Gravar ${r.envios.length} envio(s)</button>`;
+    return show("impModal");
+  }
+  toast("Não reconheci essa tela do ML. Abra \"Gestão de envios Full\" ou os produtos de um envio.", 6000);
+}
+async function confirmMlLista() {
+  const btn = $("mlGo"); btn.disabled = true; btn.textContent = "Gravando…";
+  try {
+    await api({ acao: "cabecalhos", envios: IMP.lista });
+    closeImport(); await loadEnvios(); S.filtro = "todos"; renderLista();
+    toast("Envios do ML gravados.");
+  } catch (e) { btn.disabled = false; btn.textContent = "Tentar de novo"; toast(e.message, 5000); }
 }
 
 async function confirmImport() {
@@ -544,7 +618,8 @@ function renderEnvio() {
           <span class="st" style="color:${sc}">${st}</span>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${Y}" stroke-width="1.5"><path d="m9 18 6-6-6-6"/></svg>
         </div>`;
-      }).join("") : '<div class="empty">Tudo conferido neste envio. ✓</div>'}
+      }).join("") : S.itens.length ? '<div class="empty">Tudo conferido neste envio. ✓</div>'
+        : '<div class="empty">Este envio veio da lista do ML e ainda não tem produtos.<br>Abra o envio no Mercado Livre e clique no botão <b>Enviar ao Scanner</b>, ou importe o PDF do frete.</div>'}
     </div>
 
     <div style="display:flex;gap:10px;flex-wrap:wrap">
