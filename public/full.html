@@ -786,6 +786,8 @@ function renderProduto(inv) {
     <div class="toggles">
       <label><input type="checkbox" ${pref("reopen", true) ? "checked" : ""} onchange="setPref('reopen',this.checked)"> Reabrir a câmera depois de cada unidade</label>
     </div>
+
+    <a href="javascript:editChecklist()" style="align-self:flex-end;font-size:11px;color:var(--dim);letter-spacing:.04em;margin-top:24px">alterar checklist</a>
   </main>`;
   if (S.openNext) { const n = S.openNext; S.openNext = null; if (R.state === "half") openScanner(n); }
 }
@@ -847,12 +849,13 @@ async function onRead(slot, code) {
 // e de escolher quem etiquetou. Só uma leitura ERRADA (vermelho) trava o botão.
 //
 // O checklist é por ETIQUETA (Código ML), não por SKU: anúncios com o mesmo SKU podem levar
-// coisas diferentes (pistola com e sem bicos, cera com e sem flanela). Ordem de busca:
-// etiqueta (full_checklists_etq) → SKU (full_checklists, antigo) → passos padrão.
-const PASSOS_PADRAO = ["Colocar batoque", "Colocar etiqueta de batoque", "Passar fita", "Colocar flanela"];
+// coisas diferentes (pistola com e sem bicos, cera com e sem flanela). Só tem checklist o
+// anúncio que é kit ou que leva algo além do produto ("+ flanela" etc.). Produto simples não
+// tem passo nenhum: um checklist genérico fazia mandar flanela onde não devia (pedido do
+// Bernardo, 12/10/2026).
 const EQUIPE = ["Douglas", "Ber", "Wilson", "Cássia", "Giulia"];
 const ckEtq = (it) => (S.checklistsEtq || {})[it.inv] || null;
-const passosDe = (it) => ckEtq(it)?.passos || (it.sku && (S.checklists || {})[it.sku]) || PASSOS_PADRAO;
+const passosDe = (it) => ckEtq(it)?.passos || [];
 function modoDe(it) {
   if (/universal/i.test(it.identificacao || "")) return "universal";
   if (ckEtq(it)?.kit) return "kit";
@@ -862,20 +865,19 @@ function modoDe(it) {
 function checklistHtml(it, R) {
   const passos = passosDe(it), feitos = S.feitos || new Set();
   const todos = passos.every((_, k) => feitos.has(k));
-  const ck = ckEtq(it), proprio = ck || (it.sku && (S.checklists || {})[it.sku]);
+  const ck = ckEtq(it);
   const travado = R && R.state === "bad";
-  const titulo = ck?.kit ? "O que vai neste anúncio" : "Checklist da embalagem";
+  const titulo = !passos.length ? "Produto simples" : ck?.kit ? "O que vai neste anúncio" : "Checklist da embalagem";
   return `
     <section class="check">
       <div class="check-head">
-        <span class="eyebrow">${titulo}${proprio ? "" : " · padrão"}</span>
-        <a href="javascript:editChecklist()">editar deste anúncio</a>
+        <span class="eyebrow">${titulo}</span>
       </div>
-      ${ck && !ck.revisado ? `<span style="font-size:12px;color:var(--y)">Montado a partir da descrição do anúncio. Confira na primeira vez e salve em "editar" para marcar como revisado.</span>` : ""}
+      ${ck && !ck.revisado && passos.length ? `<span style="font-size:12px;color:var(--y)">Montado a partir da descrição do anúncio. Confira na primeira vez e salve em "editar" para marcar como revisado.</span>` : ""}
       ${passos.length ? passos.map((p, k) => `
         <button class="check-item ${feitos.has(k) ? "on" : ""}" onclick="togglePasso(${k})">
           <span class="box">${feitos.has(k) ? "✓" : ""}</span><span>${esc(p)}</span>
-        </button>`).join("") : '<p style="margin:0;color:var(--muted)">Este anúncio não tem passos de embalagem.</p>'}
+        </button>`).join("") : `<p style="margin:0;font-size:18px;line-height:1.4">Vai <b>só o produto</b> deste anúncio. <b style="color:var(--y)">Não colocar</b> flanela, aplicador nem outro item.</p>`}
       <button class="btn btn-done" ${todos && !travado ? "" : "disabled"} onclick="openQuem()">Marcar como feito</button>
       ${travado ? `<span style="font-size:13px;color:var(--badtxt);text-align:center">Leitura errada: separe a unidade e toque em "Ler de novo".</span>`
         : todos ? "" : `<span style="font-size:13px;color:var(--muted);text-align:center">Marque ${passos.length - feitos.size} item(ns) para liberar.</span>`}
