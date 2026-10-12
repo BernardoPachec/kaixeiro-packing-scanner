@@ -1,126 +1,755 @@
 {
-  "_sobre": "Checklist de embalagem por ETIQUETA do Full (Código ML / inventory_id), não por SKU: anúncios com o mesmo SKU podem levar coisas diferentes (ex.: pistola com e sem bicos). Fonte: 'Conteúdo / O que vem no kit' da descrição de cada anúncio (API do ML, 12/10/2026) + respostas do Bernardo. Gravado no Supabase (full_checklists_etq) por scripts/seed_checklists.js.",
+  "_sobre": "Checklist de embalagem por ETIQUETA do Full (Código ML / inventory_id), não por SKU: anúncios com o mesmo SKU podem levar coisas diferentes (ex.: pistola com e sem bicos). Fonte: 'Conteúdo / O que vem no kit' da descrição de cada anúncio (API do ML, 12/10/2026) + respostas do Bernardo. Gravado no Supabase (full_checklists_etq) por scripts/seed_checklists.js. Varredura de 12/10/2026: descrição de todos os anúncios do Full lida; os que listam algo além do produto entraram aqui.",
   "_regras_do_bernardo": [
     "Hard Wax = pote BRANCO; Cleaner Wax = pote PRETO (o FAQ dos anúncios de Cleaner Wax diz o contrário e está errado).",
     "Kit Risco Zero: ZDDS24473 leva os 3 compostos + flanela 60x40; GVSP76063 e ALKJ75616 levam só os 3 compostos (a descrição do GVSP fala em 2 Lustro e está errada).",
     "Kit Defense: os dois anúncios são diferentes, cada um segue a própria descrição.",
-    "Snow Foam + Pistola (DYZZ51556) não leva bicos."
+    "Snow Foam + Pistola (DYZZ51556) não leva bicos.",
+    "Anúncio sem checklist cadastrado mostra 'Não tenho informação sobre o checklist' (nunca 'só o produto'): o Triple Wax 100g aparecia como sem flanela e leva flanela de brinde."
   ],
   "checklists": [
-    { "inv": "WKSZ57535", "item_id": "MLB4013825375", "sku": "CADILLAC_HARDWAX_150", "titulo": "Cera Automotiva Hard Wax Carnaúba 150g Cadillac",
-      "passos": ["1x Cera Hard Wax Cadillac 150 g (pote BRANCO)", "NÃO colocar flanela (anúncio só da cera)"] },
-    { "inv": "WPOA92836", "item_id": "MLB6922771388", "sku": "CADILLAC_HARDWAX_150_FLANELA", "titulo": "Cera Carnaúba Hard Wax Cadillac 150g Aplicador + Flanela",
-      "passos": ["1x Cera Hard Wax Cadillac 150 g (pote BRANCO)", "1x Aplicador de espuma amarelo", "1x Flanela de microfibra CINZA 30x30 cm"] },
-    { "inv": "SCSQ71288", "item_id": "MLB4447561895", "sku": "CADILLAC_HAR_300_FLANELA", "titulo": "Kit Cera Hard Wax Cadillac 300g + Flanela Pano Microfibra",
-      "passos": ["1x Cera Hard Wax Cadillac 300 g (pote BRANCO)", "1x Aplicador de espuma", "1x Flanela de microfibra 30x30 cm"] },
-    { "inv": "NNAC44578", "item_id": "MLB5246239117", "sku": "CADILLAC_HW300_FLAN60", "titulo": "Cera Hard Wax Cadillac 300g Aplicador + Flanela 60x40",
-      "passos": ["1x Cera Hard Wax Cadillac 300 g (pote BRANCO)", "1x Aplicador de espuma", "1x Flanela de microfibra GRANDE 60x40 cm (dupla face)"] },
-    { "inv": "LRVS10781", "item_id": "MLB3990384891", "sku": "CADILLAC_CLEANER_150", "titulo": "Cera Automotiva Cleaner Wax Cadillac Carnaúba 150g",
-      "passos": ["1x Cera Cleaner Wax Cadillac 150 g (pote PRETO)", "NÃO colocar flanela nem aplicador (anúncio só da cera)"] },
-    { "inv": "DQAN04734", "item_id": "MLB4702631033", "sku": "CADILLAC_CLEANER_150", "titulo": "Cera Cleaner Wax Cadillac Carnauba 150g Aplicador + Flanela",
-      "passos": ["1x Cera Cleaner Wax Cadillac 150 g (pote PRETO)", "1x Aplicador de cera amarelo", "1x Flanela de microfibra CINZA 30x30 cm"] },
-    { "inv": "UTDL87697", "item_id": "MLB6825861188", "sku": "CADILLAC_CLEANER_300", "titulo": "Cera Cleaner Wax Cadillac Carnauba 300g Aplicador + Flanela",
-      "passos": ["1x Cera Cleaner Wax Cadillac 300 g (pote PRETO)", "1x Aplicador de cera amarelo", "1x Flanela de microfibra CINZA 30x30 cm"] },
-    { "inv": "OXCT09498", "item_id": "MLB3981404605", "sku": "CADILLAC_CLEANER_300", "titulo": "Cera Automotiva Cadillac Cleaner Wax 300g",
-      "passos": ["1x Cera Cleaner Wax Cadillac 300 g (pote PRETO)", "NÃO colocar flanela nem aplicador (anúncio só da cera)"] },
-
-    { "inv": "DOPF37119", "item_id": "MLB5140198329", "sku": "KERS_WATER_GUN", "titulo": "Pistola Lavadora Alta Pressão Kers 5000 Psi Com Kit 5 Bicos",
-      "passos": ["1x Pistola Kers Water Gun 5000 PSI", "Colocar o KIT COM 5 BICOS (0°, 15°, 25°, 40° e bico de sabão)"] },
-    { "inv": "LYPB53088", "item_id": "MLB5342124293", "sku": "KERS_WATER_GUN", "titulo": "Pistola Lavadora Alta Pressão Kers Water Gun 5000 Psi Preto",
-      "passos": ["1x Pistola Kers Water Gun 5000 PSI", "NÃO colocar o kit de bicos (anúncio só da pistola)"] },
-    { "inv": "RVYW36827", "item_id": "MLB7524255646", "sku": "KERS_SPEEDY_WASH", "titulo": "Pistola Lavadora Alta Pressão Kers 5200 Psi Com Kit 5 Bicos",
-      "passos": ["1x Pistola Kers Speedy Wash 5200 PSI", "Colocar o KIT COM 5 BICOS (0°, 15°, 25°, 40° e bico de sabão)"] },
-    { "inv": "OFUR51979", "item_id": "MLB7757863352", "sku": "KERS_SPEEDY_WASH", "titulo": "Pistola Lavadora Alta Pressão Kers Speedy Wash 5200 Psi Laranja",
-      "passos": ["1x Pistola Kers Speedy Wash 5200 PSI", "NÃO colocar o kit de bicos (anúncio só da pistola)"] },
-    { "inv": "DYZZ51556", "item_id": "MLB7778136052", "sku": "NACAO_KIT_SNOW_WATERGUN", "titulo": "Snow Foam Nação Detail Hobby 28mm + Pistola Kers Water Gun Azul",
-      "passos": ["1x Canhão Snow Foam Nação Detail Hobby Edition (garrafa 1 L, bocal 28 mm)", "Giclês 1,1 mm e 1,4 mm junto (o de 1,2 mm vem instalado)", "1x Pistola Kers Water Gun 5000 PSI", "NÃO colocar o kit de bicos"] },
-    { "inv": "WBUE51848", "item_id": "MLB7739909936", "sku": "NACAO_KIT_SNOW_NEVASCA", "titulo": "Kit Snow Foam Nação Detail Hobby + Shampoo Nevasca 500ml",
-      "passos": ["1x Canhão Snow Foam Nação Detail Hobby Edition (garrafa 1 L, bocal 28 mm)", "Giclês 1,1 mm e 1,4 mm junto (o de 1,2 mm vem instalado)", "1x Shampoo Nevasca Cadillac 500 ml"] },
-    { "inv": "UOKT48582", "item_id": "MLB5325183431", "sku": "NACAO_KIT_SNOW_HOBBY_2G", "titulo": "Snow Foam Nação Detail Hobby Engate Rápido + Garrafa Extra",
-      "passos": ["1x Canhão Snow Foam Nação Detail Hobby Edition (garrafa 1 L, bocal 28 mm)", "1x Garrafa EXTRA 1 L, bocal 28 mm", "Giclês 1,1 mm e 1,4 mm junto (o de 1,2 mm vem instalado)"] },
-    { "inv": "CTQD50834", "item_id": "MLB5360575553", "sku": "NACAO_KIT_SNOW_PRO_2G", "titulo": "Snow Foam Nação Detail Hobby Pro + Garrafa Extra Bocal 48mm",
-      "passos": ["1x Canhão Snow Foam Nação Detail Hobby PRO Edition (garrafa 1 L, bocal 48 mm)", "1x Garrafa EXTRA 1 L, bocal 48 mm", "3 giclês junto (1,1 / 1,2 / 1,4 mm)"] },
-
-    { "inv": "BVDN95167", "item_id": "MLB6922953526", "sku": "CADILLAC_SPLASH", "titulo": "Cadillac Splash Cristalizador De Vidros 10ml + Flanela",
-      "passos": ["1x Splash Cristalizador de Vidros Cadillac 10 ml", "1x Flanela de microfibra CINZA 30x30 cm"] },
-    { "inv": "ALKJ90542", "item_id": "MLB6825430640", "sku": "CADILLAC_SPLASH", "titulo": "Cristalizador De Vidros Repelente De Chuva Splash One Shot 10ml Cadillac",
-      "passos": ["1x Splash Cristalizador de Vidros Cadillac 10 ml", "NÃO colocar flanela (anúncio sem flanela)"] },
-    { "inv": "RNNK51296", "item_id": "MLB5289164699", "sku": "CADILLAC_KIT_CHUVA_SPLASH", "titulo": "Kit Removedor De Chuva Ácida E Cristalizador Vidro Cadillac",
-      "passos": ["1x Removedor de Chuva Ácida Cadillac 500 ml", "1x Splash Cristalizador de Vidros Cadillac 10 ml (na cartela)"] },
-
-    { "inv": "NYFH89533", "item_id": "MLB4702482233", "sku": "CADILLAC_CADMIX_500", "titulo": "Borrifador Dupla Ação Cadmix Diluição 500ml Cadillac",
-      "passos": ["1x Borrifador Cadmix Dupla Ação Cadillac 500 ml (só 1 unidade)"] },
-    { "inv": "BOIM52548", "item_id": "MLB5303929645", "sku": "CADILLAC_CADMIX_500_X2", "titulo": "Kit 2 Borrifadores Dupla Ação Cadmix 500ml Cadillac Espuma",
-      "passos": ["2x Borrifador Cadmix Dupla Ação Cadillac 500 ml (vazios)"] },
-    { "inv": "DBAC04312", "item_id": "MLB6825423346", "sku": "CADILLAC_DILUVIO_ULTRA_CADMIX", "titulo": "Cadillac Dilúvio Concentrado + Diluidor Com Dosador Cadmix",
-      "passos": ["1x Dilúvio Ultra Cadillac 500 ml (concentrado, tampa flip)", "1x Borrifador Cadmix Dupla Ação Cadillac 500 ml"] },
-    { "inv": "OVWD38270", "item_id": "MLB7533899122", "sku": "CADILLAC_MODULAR_500_CADMIX", "titulo": "Kit Limpa Piso Modular Cadillac 500ml + Pulverizador Cadmix",
-      "passos": ["1x Modular Limpa Pisos Cadillac 500 ml", "1x Borrifador Cadmix Dupla Ação Cadillac 500 ml (vazio)"] },
-
-    { "inv": "RJLX32024", "item_id": "MLB5119238057", "sku": "AA_FLANELA_60X40_KIT10", "titulo": "Kit 10 Flanelas Microfibra Premium 60x40 Amarela Autoamerica",
-      "passos": ["10x Flanela de microfibra Autoamerica 40x60 cm AMARELA (contar as 10)"] },
-    { "inv": "KNCG49269", "item_id": "MLB7724017968", "sku": "KERS_DRILL_BRUSH", "titulo": "Kit 3 Escovas Para Parafusadeira Kers Drill Brush Power Laranja E Preto",
-      "passos": ["1x Escova Drill Brush PLANA GRANDE", "1x Escova Drill Brush PLANA PEQUENA", "1x Escova Drill Brush REDONDA"] },
-    { "inv": "MEHQ48962", "item_id": "MLB5311552527", "sku": "KERS_KIT_PINCEIS_7", "titulo": "Kit 7 Pincéis Detalhamento Automotivo Kers Cerdas Naturais",
-      "passos": ["7x Pincel de detalhamento Kers (contar os 7, tamanhos variados)"] },
-    { "inv": "YRBD37671", "item_id": "MLB7589999696", "sku": "KERS_KIT_4BOINAS_5", "titulo": "Kit 4 Boinas Kers Espuma E Lã Corte Polimento Refino 5 Pol",
-      "passos": ["1x Boina de espuma Kers Hyper 5\" VERDE (corte)", "1x Boina de espuma Kers Hyper 5\" LARANJA (refino)", "1x Boina de espuma Kers Hyper 5\" AZUL (lustro)", "1x Boina HÍBRIDA Kers lã e espuma 5\""] },
-    { "inv": "EISQ36476", "item_id": "MLB5187930203", "sku": "KERS_KIT_BOINA_HYPER_TRIO_5", "titulo": "Kit Boina De Espuma Kers Corte Polimento Refino 5 Polegadas",
-      "passos": ["1x Boina de espuma Kers Hyper 5\" VERDE (corte)", "1x Boina de espuma Kers Hyper 5\" LARANJA (refino)", "1x Boina de espuma Kers Hyper 5\" AZUL (lustro)"] },
-    { "inv": "SKRD50059", "item_id": "MLB5326112045", "sku": "KERS_KIT_HYPER_TRIO_3", "titulo": "Kit Boina De Espuma Kers Corte Refino Lustro 3 Polegadas",
-      "passos": ["1x Boina de espuma Kers Hyper 3\" VERDE (agressiva)", "1x Boina de espuma Kers Hyper 3\" LARANJA (média)", "1x Boina de espuma Kers Hyper 3\" AZUL (suave)"] },
-    { "inv": "FJNW48357", "item_id": "MLB5311552721", "sku": "KERS_KIT_HYPER_TRIO_6", "titulo": "Kit Boina De Espuma Kers Corte Refino Lustro 6 Polegadas",
-      "passos": ["1x Boina de espuma Kers Hyper 6\" VERDE (agressiva)", "1x Boina de espuma Kers Hyper 6\" LARANJA (média)", "1x Boina de espuma Kers Hyper 6\" AZUL (suave)"] },
-
-    { "inv": "LYMS09887", "item_id": "MLB6922884744", "sku": "CADILLAC_DILUVIO_DEMOLIDOR", "titulo": "Kit Cadillac Demolidor + Dilúvio Express 500ml + Flanela",
-      "passos": ["1x Demolidor Cadillac 500 ml", "1x Dilúvio Express Cadillac 500 ml", "1x Flanela de microfibra CINZA 30x30 cm"] },
-    { "inv": "ZZTY09728", "item_id": "MLB6922871638", "sku": "CADILLAC_DILUVIO_NEVASCA", "titulo": "Kit Cadillac Nevasca + Dilúvio Express 500ml + Flanela",
-      "passos": ["1x Nevasca Cadillac 500 ml", "1x Dilúvio Express Cadillac 500 ml", "1x Flanela de microfibra CINZA 30x30 cm"] },
-    { "inv": "NKOV95510", "item_id": "MLB4796891421", "sku": "CADILLAC_DEMOLIDOR_NEVASCA_500", "titulo": "Kit Lava Auto Cadillac Pré-lavagem + Shampoo Snow Foam 500ml",
-      "passos": ["1x Demolidor Cadillac 500 ml", "1x Nevasca Cadillac 500 ml", "NÃO colocar luva nem flanela (kit só com os 2 produtos)"] },
-    { "inv": "WWZB37399", "item_id": "MLB5175355199", "sku": "CADILLAC_KIT_DEMOLIDOR_NEVASCA_500_LUVA", "titulo": "Kit Lava Auto Cadillac 500ml Pré-lavagem Shampoo Com Luva",
-      "passos": ["1x Demolidor Cadillac 500 ml", "1x Nevasca Cadillac 500 ml", "1x Luva de microfibra Autoamerica AZUL (dupla face)"] },
-    { "inv": "OLSR39710", "item_id": "MLB7575624466", "sku": "CADILLAC_KIT_DEMOLIDOR_NEVASCA_1L5", "titulo": "Kit Lava Auto Cadillac Pré-lavagem + Shampoo 1,5l Snow Foam",
-      "passos": ["1x Demolidor Cadillac 1,5 L", "1x Nevasca Cadillac 1,5 L", "NÃO colocar flanela (kit só com os 2 produtos)"] },
-    { "inv": "STIQ38695", "item_id": "MLB5175597411", "sku": "CADILLAC_KIT_DEMOLIDOR_NEVASCA_1L5_FLANELA", "titulo": "Kit Lava Auto Cadillac 1,5l Pré-lavagem Shampoo E Flanela",
-      "passos": ["1x Demolidor Cadillac 1,5 L", "1x Nevasca Cadillac 1,5 L", "1x Flanela de microfibra Autoamerica 40x60 cm AMARELA (borda laranja)"] },
-    { "inv": "GAUL40220", "item_id": "MLB7571905062", "sku": "CADILLAC_KIT_EXTERIOR", "titulo": "Kit Lavagem Automotiva Cadillac Shampoo Cera E Pretinho",
-      "passos": ["1x Demolidor Lava Auto Cadillac 500 ml", "1x Nevasca Lava Auto Cadillac 500 ml", "1x Dilúvio Express Cadillac 500 ml", "1x Black Magic Cadillac 250 ml"] },
-    { "inv": "SRYW48422", "item_id": "MLB5246574321", "sku": "CADILLAC_KIT_COMPLETO_6", "titulo": "Kit Limpeza Automotiva Completo Cadillac Shampoo Cera Couro",
-      "passos": ["1x Demolidor Lava Auto Cadillac 500 ml", "1x Nevasca Lava Auto Cadillac 500 ml", "1x Dilúvio Express Cadillac 500 ml", "1x Black Magic Cadillac 250 ml", "1x Doctor Shine Cadillac 250 ml", "1x Tratamento de Couro Cadillac 250 ml"] },
-    { "inv": "KVTO49488", "item_id": "MLB7725444614", "sku": "CADILLAC_KIT_COURO_250", "titulo": "Kit Limpa Couro 500ml E Hidratante De Couro 250ml Cadillac",
-      "passos": ["1x Limpa Couro Cadillac 500 ml (com gatilho)", "1x Tratamento de Couro Cadillac 250 ml"] },
-    { "inv": "CVLK48357", "item_id": "MLB5321372427", "sku": "CADILLAC_KIT_COURO_500", "titulo": "Kit Limpa Couro E Hidratante De Couro Cadillac 500ml Banco",
-      "passos": ["1x Limpa Couro Cadillac 500 ml (com gatilho)", "1x Tratamento de Couro Cadillac 500 ml"] },
-
-    { "inv": "GYOH39429", "item_id": "MLB7568210100", "sku": "JACA_KIT_GRIME_SNAKE", "titulo": "Kit Limpa Couro Jaça Grime Cleaner + Hidratante 500ml",
-      "passos": ["1x Grime Cleaner Jaça 500 ml (limpador de couro)", "1x Snake Leather Soft Jaça 500 ml (hidratante de couro)"] },
-    { "inv": "OJIO37038", "item_id": "MLB5169195639", "sku": "JACA_KIT_TYREX_BLACK_LEMON", "titulo": "Kit Limpa Pneu Jaça Tyrex Pro + Pretinho Black Lemon 500ml",
-      "passos": ["1x Tyrex Pro Jaça 500 ml", "1x Black Lemon Jaça 500 ml"] },
-    { "inv": "YUPJ38828", "item_id": "MLB7568210006", "sku": "JACA_KIT_BLACK_LEMON_CARBON_BLACK", "titulo": "Kit Pretinho Pneu Jaça Black Lemon + Carbon Black 500ml",
-      "passos": ["1x Black Lemon Jaça 500 ml", "1x Carbon Black Jaça 500 ml"] },
-
-    { "inv": "MNXD24425", "item_id": "MLB4986541345", "sku": "MAGIL_KIT_FG1L_UL115L", "titulo": "Kit Lava Auto Foam Gloss 1l E Apc Ultra Limpador Magil Clean",
-      "passos": ["1x Foam Gloss Magil Clean 1 L", "1x Ultra Limpador AutoClean Magil Clean 1,15 L", "1x Flanela de microfibra 40x60 cm"] },
-    { "inv": "SMKX24332", "item_id": "MLB4993020101", "sku": "MAGIL_KIT_FG1L_UL115L_BB500", "titulo": "Kit Limpeza Automotiva Completo Magil Clean Lava Auto E Apc",
-      "passos": ["1x Foam Gloss Magil Clean 1 L", "1x Ultra Limpador AutoClean Magil Clean 1,15 L", "1x Black Berry Magil Clean 500 ml", "1x Flanela de microfibra 40x60 cm"] },
-
-    { "inv": "UYOI24129", "item_id": "MLB7304622474", "sku": "AA_KIT_FASTCUT_ONESTEP", "titulo": "Kit Polimento Autoamerica One Step 3 Em 1 + Fast Cut 1kg",
-      "passos": ["1x Fast Cut Autoamerica 1 kg", "1x One Step 3 em 1 Autoamerica 1 kg", "1x Flanela de microfibra Autoamerica 40x60 cm AMARELA"] },
-    { "inv": "VFHF24912", "item_id": "MLB4975441785", "sku": "AA_KIT_POLIMENTO_TRIO", "titulo": "Kit Polimento Menzerna Autoamerica Corte Refino Lustro",
-      "passos": ["1x Corte Líquido Autoamerica 500 g (etapa 1)", "1x Refino 2000 Autoamerica/Menzerna 500 g (etapa 2)", "1x Lustro 3000 Autoamerica/Menzerna 500 g (etapa 3)", "1x Flanela de microfibra Autoamerica 40x60 cm AMARELA"] },
-    { "inv": "ZDDS24473", "item_id": "MLB4980752213", "sku": "CADILLAC_RISCO_ZERO_KIT", "titulo": "Kit Polimento Cadillac Risco Zero Corte Refino Lustro 500g Claras E Escuras",
-      "passos": ["1x Risco Zero CORTE 500 g", "1x Risco Zero REFINO 500 g", "1x Risco Zero LUSTRO 500 g", "1x Flanela de microfibra Autoamerica AMARELA 60x40 cm"] },
-    { "inv": "GVSP76063", "item_id": "MLB6631756028", "sku": "CADILLAC_RISCO_ZERO_KIT", "titulo": "Kit Polimento Risco Zero Corte Refino E Lustro 500g Cadillac Claras E Escuras",
-      "passos": ["1x Risco Zero CORTE 500 g", "1x Risco Zero REFINO 500 g", "1x Risco Zero LUSTRO 500 g", "NÃO colocar flanela (só o kit com os 3)"] },
-    { "inv": "ALKJ75616", "item_id": "MLB4821244737", "sku": "CADILLAC_RISCO_ZERO_KIT", "titulo": "Kit Polimento Risco Zero Corte Refino Lustro 500gr Cadillac",
-      "passos": ["1x Risco Zero CORTE 500 g", "1x Risco Zero REFINO 500 g", "1x Risco Zero LUSTRO 500 g", "NÃO colocar flanela (só o kit com os 3)"] },
-
-    { "inv": "UNGV12761", "item_id": "MLB7059038672", "sku": "CADILLAC_VITRIFICADOR_DEFENSE", "titulo": "Vitrificador Cerâmico Cadillac Defense Kit 50ml Coating Nano",
-      "passos": ["1x Cadillac Defense 50 ml (frasco conta-gotas)", "1x Cadillac Silac 100 ml (spray)", "1x Aplicador de espuma Cadillac", "1x Pano de microfibra Cadillac"] },
-    { "inv": "XRDX97439", "item_id": "MLB7058441742", "sku": "CADILLAC_VITRIFICADOR_DEFENSE", "titulo": "Kit Vitrificador Defense 50ml Cadillac",
-      "passos": ["1x Cadillac Defense 50 ml", "1x Cadillac Silac 100 ml", "2x Toalha de suede", "1x Aplicador em EVA", "1x Encarte de instruções"] },
-    { "inv": "PRYI49765", "item_id": "MLB5311528963", "sku": "KERS_W1000_KIT", "titulo": "Politriz Nano Recarregável Kers W1000 12v Kit Completo Laranja 127/220v",
-      "passos": ["1x Politriz Kers W1000 na maleta", "2x Bateria 4,0 Ah", "1x Carregador bivolt", "Kits de boinas de 1\", 1,5\", 2\" e 3\"", "1x Kit de boinas PS", "1x Kit de acessórios Nano Híbrida", "1x Adaptador M14"] }
+    {
+      "inv": "WKSZ57535",
+      "item_id": "MLB4013825375",
+      "sku": "CADILLAC_HARDWAX_150",
+      "titulo": "Cera Automotiva Hard Wax Carnaúba 150g Cadillac",
+      "passos": [
+        "1x Cera Hard Wax Cadillac 150 g (pote BRANCO)",
+        "NÃO colocar flanela (anúncio só da cera)"
+      ]
+    },
+    {
+      "inv": "WPOA92836",
+      "item_id": "MLB6922771388",
+      "sku": "CADILLAC_HARDWAX_150_FLANELA",
+      "titulo": "Cera Carnaúba Hard Wax Cadillac 150g Aplicador + Flanela",
+      "passos": [
+        "1x Cera Hard Wax Cadillac 150 g (pote BRANCO)",
+        "1x Aplicador de espuma amarelo",
+        "1x Flanela de microfibra CINZA 30x30 cm"
+      ]
+    },
+    {
+      "inv": "SCSQ71288",
+      "item_id": "MLB4447561895",
+      "sku": "CADILLAC_HAR_300_FLANELA",
+      "titulo": "Kit Cera Hard Wax Cadillac 300g + Flanela Pano Microfibra",
+      "passos": [
+        "1x Cera Hard Wax Cadillac 300 g (pote BRANCO)",
+        "1x Aplicador de espuma",
+        "1x Flanela de microfibra 30x30 cm"
+      ]
+    },
+    {
+      "inv": "NNAC44578",
+      "item_id": "MLB5246239117",
+      "sku": "CADILLAC_HW300_FLAN60",
+      "titulo": "Cera Hard Wax Cadillac 300g Aplicador + Flanela 60x40",
+      "passos": [
+        "1x Cera Hard Wax Cadillac 300 g (pote BRANCO)",
+        "1x Aplicador de espuma",
+        "1x Flanela de microfibra GRANDE 60x40 cm (dupla face)"
+      ]
+    },
+    {
+      "inv": "LRVS10781",
+      "item_id": "MLB3990384891",
+      "sku": "CADILLAC_CLEANER_150",
+      "titulo": "Cera Automotiva Cleaner Wax Cadillac Carnaúba 150g",
+      "passos": [
+        "1x Cera Cleaner Wax Cadillac 150 g (pote PRETO)",
+        "NÃO colocar flanela nem aplicador (anúncio só da cera)"
+      ]
+    },
+    {
+      "inv": "DQAN04734",
+      "item_id": "MLB4702631033",
+      "sku": "CADILLAC_CLEANER_150",
+      "titulo": "Cera Cleaner Wax Cadillac Carnauba 150g Aplicador + Flanela",
+      "passos": [
+        "1x Cera Cleaner Wax Cadillac 150 g (pote PRETO)",
+        "1x Aplicador de cera amarelo",
+        "1x Flanela de microfibra CINZA 30x30 cm"
+      ]
+    },
+    {
+      "inv": "UTDL87697",
+      "item_id": "MLB6825861188",
+      "sku": "CADILLAC_CLEANER_300",
+      "titulo": "Cera Cleaner Wax Cadillac Carnauba 300g Aplicador + Flanela",
+      "passos": [
+        "1x Cera Cleaner Wax Cadillac 300 g (pote PRETO)",
+        "1x Aplicador de cera amarelo",
+        "1x Flanela de microfibra CINZA 30x30 cm"
+      ]
+    },
+    {
+      "inv": "OXCT09498",
+      "item_id": "MLB3981404605",
+      "sku": "CADILLAC_CLEANER_300",
+      "titulo": "Cera Automotiva Cadillac Cleaner Wax 300g",
+      "passos": [
+        "1x Cera Cleaner Wax Cadillac 300 g (pote PRETO)",
+        "NÃO colocar flanela nem aplicador (anúncio só da cera)"
+      ]
+    },
+    {
+      "inv": "DOPF37119",
+      "item_id": "MLB5140198329",
+      "sku": "KERS_WATER_GUN",
+      "titulo": "Pistola Lavadora Alta Pressão Kers 5000 Psi Com Kit 5 Bicos",
+      "passos": [
+        "1x Pistola Kers Water Gun 5000 PSI",
+        "Colocar o KIT COM 5 BICOS (0°, 15°, 25°, 40° e bico de sabão)"
+      ]
+    },
+    {
+      "inv": "LYPB53088",
+      "item_id": "MLB5342124293",
+      "sku": "KERS_WATER_GUN",
+      "titulo": "Pistola Lavadora Alta Pressão Kers Water Gun 5000 Psi Preto",
+      "passos": [
+        "1x Pistola Kers Water Gun 5000 PSI",
+        "NÃO colocar o kit de bicos (anúncio só da pistola)"
+      ]
+    },
+    {
+      "inv": "RVYW36827",
+      "item_id": "MLB7524255646",
+      "sku": "KERS_SPEEDY_WASH",
+      "titulo": "Pistola Lavadora Alta Pressão Kers 5200 Psi Com Kit 5 Bicos",
+      "passos": [
+        "1x Pistola Kers Speedy Wash 5200 PSI",
+        "Colocar o KIT COM 5 BICOS (0°, 15°, 25°, 40° e bico de sabão)"
+      ]
+    },
+    {
+      "inv": "OFUR51979",
+      "item_id": "MLB7757863352",
+      "sku": "KERS_SPEEDY_WASH",
+      "titulo": "Pistola Lavadora Alta Pressão Kers Speedy Wash 5200 Psi Laranja",
+      "passos": [
+        "1x Pistola Kers Speedy Wash 5200 PSI",
+        "NÃO colocar o kit de bicos (anúncio só da pistola)"
+      ]
+    },
+    {
+      "inv": "DYZZ51556",
+      "item_id": "MLB7778136052",
+      "sku": "NACAO_KIT_SNOW_WATERGUN",
+      "titulo": "Snow Foam Nação Detail Hobby 28mm + Pistola Kers Water Gun Azul",
+      "passos": [
+        "1x Canhão Snow Foam Nação Detail Hobby Edition (garrafa 1 L, bocal 28 mm)",
+        "Giclês 1,1 mm e 1,4 mm junto (o de 1,2 mm vem instalado)",
+        "1x Pistola Kers Water Gun 5000 PSI",
+        "NÃO colocar o kit de bicos"
+      ]
+    },
+    {
+      "inv": "WBUE51848",
+      "item_id": "MLB7739909936",
+      "sku": "NACAO_KIT_SNOW_NEVASCA",
+      "titulo": "Kit Snow Foam Nação Detail Hobby + Shampoo Nevasca 500ml",
+      "passos": [
+        "1x Canhão Snow Foam Nação Detail Hobby Edition (garrafa 1 L, bocal 28 mm)",
+        "Giclês 1,1 mm e 1,4 mm junto (o de 1,2 mm vem instalado)",
+        "1x Shampoo Nevasca Cadillac 500 ml"
+      ]
+    },
+    {
+      "inv": "UOKT48582",
+      "item_id": "MLB5325183431",
+      "sku": "NACAO_KIT_SNOW_HOBBY_2G",
+      "titulo": "Snow Foam Nação Detail Hobby Engate Rápido + Garrafa Extra",
+      "passos": [
+        "1x Canhão Snow Foam Nação Detail Hobby Edition (garrafa 1 L, bocal 28 mm)",
+        "1x Garrafa EXTRA 1 L, bocal 28 mm",
+        "Giclês 1,1 mm e 1,4 mm junto (o de 1,2 mm vem instalado)"
+      ]
+    },
+    {
+      "inv": "CTQD50834",
+      "item_id": "MLB5360575553",
+      "sku": "NACAO_KIT_SNOW_PRO_2G",
+      "titulo": "Snow Foam Nação Detail Hobby Pro + Garrafa Extra Bocal 48mm",
+      "passos": [
+        "1x Canhão Snow Foam Nação Detail Hobby PRO Edition (garrafa 1 L, bocal 48 mm)",
+        "1x Garrafa EXTRA 1 L, bocal 48 mm",
+        "3 giclês junto (1,1 / 1,2 / 1,4 mm)"
+      ]
+    },
+    {
+      "inv": "BVDN95167",
+      "item_id": "MLB6922953526",
+      "sku": "CADILLAC_SPLASH",
+      "titulo": "Cadillac Splash Cristalizador De Vidros 10ml + Flanela",
+      "passos": [
+        "1x Splash Cristalizador de Vidros Cadillac 10 ml",
+        "1x Flanela de microfibra CINZA 30x30 cm"
+      ]
+    },
+    {
+      "inv": "ALKJ90542",
+      "item_id": "MLB6825430640",
+      "sku": "CADILLAC_SPLASH",
+      "titulo": "Cristalizador De Vidros Repelente De Chuva Splash One Shot 10ml Cadillac",
+      "passos": [
+        "1x Splash Cristalizador de Vidros Cadillac 10 ml",
+        "NÃO colocar flanela (anúncio sem flanela)"
+      ]
+    },
+    {
+      "inv": "RNNK51296",
+      "item_id": "MLB5289164699",
+      "sku": "CADILLAC_KIT_CHUVA_SPLASH",
+      "titulo": "Kit Removedor De Chuva Ácida E Cristalizador Vidro Cadillac",
+      "passos": [
+        "1x Removedor de Chuva Ácida Cadillac 500 ml",
+        "1x Splash Cristalizador de Vidros Cadillac 10 ml (na cartela)"
+      ]
+    },
+    {
+      "inv": "NYFH89533",
+      "item_id": "MLB4702482233",
+      "sku": "CADILLAC_CADMIX_500",
+      "titulo": "Borrifador Dupla Ação Cadmix Diluição 500ml Cadillac",
+      "passos": [
+        "1x Borrifador Cadmix Dupla Ação Cadillac 500 ml (só 1 unidade)"
+      ]
+    },
+    {
+      "inv": "BOIM52548",
+      "item_id": "MLB5303929645",
+      "sku": "CADILLAC_CADMIX_500_X2",
+      "titulo": "Kit 2 Borrifadores Dupla Ação Cadmix 500ml Cadillac Espuma",
+      "passos": [
+        "2x Borrifador Cadmix Dupla Ação Cadillac 500 ml (vazios)"
+      ]
+    },
+    {
+      "inv": "DBAC04312",
+      "item_id": "MLB6825423346",
+      "sku": "CADILLAC_DILUVIO_ULTRA_CADMIX",
+      "titulo": "Cadillac Dilúvio Concentrado + Diluidor Com Dosador Cadmix",
+      "passos": [
+        "1x Dilúvio Ultra Cadillac 500 ml (concentrado, tampa flip)",
+        "1x Borrifador Cadmix Dupla Ação Cadillac 500 ml"
+      ]
+    },
+    {
+      "inv": "OVWD38270",
+      "item_id": "MLB7533899122",
+      "sku": "CADILLAC_MODULAR_500_CADMIX",
+      "titulo": "Kit Limpa Piso Modular Cadillac 500ml + Pulverizador Cadmix",
+      "passos": [
+        "1x Modular Limpa Pisos Cadillac 500 ml",
+        "1x Borrifador Cadmix Dupla Ação Cadillac 500 ml (vazio)"
+      ]
+    },
+    {
+      "inv": "RJLX32024",
+      "item_id": "MLB5119238057",
+      "sku": "AA_FLANELA_60X40_KIT10",
+      "titulo": "Kit 10 Flanelas Microfibra Premium 60x40 Amarela Autoamerica",
+      "passos": [
+        "10x Flanela de microfibra Autoamerica 40x60 cm AMARELA (contar as 10)"
+      ]
+    },
+    {
+      "inv": "KNCG49269",
+      "item_id": "MLB7724017968",
+      "sku": "KERS_DRILL_BRUSH",
+      "titulo": "Kit 3 Escovas Para Parafusadeira Kers Drill Brush Power Laranja E Preto",
+      "passos": [
+        "1x Escova Drill Brush PLANA GRANDE",
+        "1x Escova Drill Brush PLANA PEQUENA",
+        "1x Escova Drill Brush REDONDA"
+      ]
+    },
+    {
+      "inv": "MEHQ48962",
+      "item_id": "MLB5311552527",
+      "sku": "KERS_KIT_PINCEIS_7",
+      "titulo": "Kit 7 Pincéis Detalhamento Automotivo Kers Cerdas Naturais",
+      "passos": [
+        "7x Pincel de detalhamento Kers (contar os 7, tamanhos variados)"
+      ]
+    },
+    {
+      "inv": "YRBD37671",
+      "item_id": "MLB7589999696",
+      "sku": "KERS_KIT_4BOINAS_5",
+      "titulo": "Kit 4 Boinas Kers Espuma E Lã Corte Polimento Refino 5 Pol",
+      "passos": [
+        "1x Boina de espuma Kers Hyper 5\" VERDE (corte)",
+        "1x Boina de espuma Kers Hyper 5\" LARANJA (refino)",
+        "1x Boina de espuma Kers Hyper 5\" AZUL (lustro)",
+        "1x Boina HÍBRIDA Kers lã e espuma 5\""
+      ]
+    },
+    {
+      "inv": "EISQ36476",
+      "item_id": "MLB5187930203",
+      "sku": "KERS_KIT_BOINA_HYPER_TRIO_5",
+      "titulo": "Kit Boina De Espuma Kers Corte Polimento Refino 5 Polegadas",
+      "passos": [
+        "1x Boina de espuma Kers Hyper 5\" VERDE (corte)",
+        "1x Boina de espuma Kers Hyper 5\" LARANJA (refino)",
+        "1x Boina de espuma Kers Hyper 5\" AZUL (lustro)"
+      ]
+    },
+    {
+      "inv": "SKRD50059",
+      "item_id": "MLB5326112045",
+      "sku": "KERS_KIT_HYPER_TRIO_3",
+      "titulo": "Kit Boina De Espuma Kers Corte Refino Lustro 3 Polegadas",
+      "passos": [
+        "1x Boina de espuma Kers Hyper 3\" VERDE (agressiva)",
+        "1x Boina de espuma Kers Hyper 3\" LARANJA (média)",
+        "1x Boina de espuma Kers Hyper 3\" AZUL (suave)"
+      ]
+    },
+    {
+      "inv": "FJNW48357",
+      "item_id": "MLB5311552721",
+      "sku": "KERS_KIT_HYPER_TRIO_6",
+      "titulo": "Kit Boina De Espuma Kers Corte Refino Lustro 6 Polegadas",
+      "passos": [
+        "1x Boina de espuma Kers Hyper 6\" VERDE (agressiva)",
+        "1x Boina de espuma Kers Hyper 6\" LARANJA (média)",
+        "1x Boina de espuma Kers Hyper 6\" AZUL (suave)"
+      ]
+    },
+    {
+      "inv": "LYMS09887",
+      "item_id": "MLB6922884744",
+      "sku": "CADILLAC_DILUVIO_DEMOLIDOR",
+      "titulo": "Kit Cadillac Demolidor + Dilúvio Express 500ml + Flanela",
+      "passos": [
+        "1x Demolidor Cadillac 500 ml",
+        "1x Dilúvio Express Cadillac 500 ml",
+        "1x Flanela de microfibra CINZA 30x30 cm"
+      ]
+    },
+    {
+      "inv": "ZZTY09728",
+      "item_id": "MLB6922871638",
+      "sku": "CADILLAC_DILUVIO_NEVASCA",
+      "titulo": "Kit Cadillac Nevasca + Dilúvio Express 500ml + Flanela",
+      "passos": [
+        "1x Nevasca Cadillac 500 ml",
+        "1x Dilúvio Express Cadillac 500 ml",
+        "1x Flanela de microfibra CINZA 30x30 cm"
+      ]
+    },
+    {
+      "inv": "NKOV95510",
+      "item_id": "MLB4796891421",
+      "sku": "CADILLAC_DEMOLIDOR_NEVASCA_500",
+      "titulo": "Kit Lava Auto Cadillac Pré-lavagem + Shampoo Snow Foam 500ml",
+      "passos": [
+        "1x Demolidor Cadillac 500 ml",
+        "1x Nevasca Cadillac 500 ml",
+        "NÃO colocar luva nem flanela (kit só com os 2 produtos)"
+      ]
+    },
+    {
+      "inv": "WWZB37399",
+      "item_id": "MLB5175355199",
+      "sku": "CADILLAC_KIT_DEMOLIDOR_NEVASCA_500_LUVA",
+      "titulo": "Kit Lava Auto Cadillac 500ml Pré-lavagem Shampoo Com Luva",
+      "passos": [
+        "1x Demolidor Cadillac 500 ml",
+        "1x Nevasca Cadillac 500 ml",
+        "1x Luva de microfibra Autoamerica AZUL (dupla face)"
+      ]
+    },
+    {
+      "inv": "OLSR39710",
+      "item_id": "MLB7575624466",
+      "sku": "CADILLAC_KIT_DEMOLIDOR_NEVASCA_1L5",
+      "titulo": "Kit Lava Auto Cadillac Pré-lavagem + Shampoo 1,5l Snow Foam",
+      "passos": [
+        "1x Demolidor Cadillac 1,5 L",
+        "1x Nevasca Cadillac 1,5 L",
+        "NÃO colocar flanela (kit só com os 2 produtos)"
+      ]
+    },
+    {
+      "inv": "STIQ38695",
+      "item_id": "MLB5175597411",
+      "sku": "CADILLAC_KIT_DEMOLIDOR_NEVASCA_1L5_FLANELA",
+      "titulo": "Kit Lava Auto Cadillac 1,5l Pré-lavagem Shampoo E Flanela",
+      "passos": [
+        "1x Demolidor Cadillac 1,5 L",
+        "1x Nevasca Cadillac 1,5 L",
+        "1x Flanela de microfibra Autoamerica 40x60 cm AMARELA (borda laranja)"
+      ]
+    },
+    {
+      "inv": "GAUL40220",
+      "item_id": "MLB7571905062",
+      "sku": "CADILLAC_KIT_EXTERIOR",
+      "titulo": "Kit Lavagem Automotiva Cadillac Shampoo Cera E Pretinho",
+      "passos": [
+        "1x Demolidor Lava Auto Cadillac 500 ml",
+        "1x Nevasca Lava Auto Cadillac 500 ml",
+        "1x Dilúvio Express Cadillac 500 ml",
+        "1x Black Magic Cadillac 250 ml"
+      ]
+    },
+    {
+      "inv": "SRYW48422",
+      "item_id": "MLB5246574321",
+      "sku": "CADILLAC_KIT_COMPLETO_6",
+      "titulo": "Kit Limpeza Automotiva Completo Cadillac Shampoo Cera Couro",
+      "passos": [
+        "1x Demolidor Lava Auto Cadillac 500 ml",
+        "1x Nevasca Lava Auto Cadillac 500 ml",
+        "1x Dilúvio Express Cadillac 500 ml",
+        "1x Black Magic Cadillac 250 ml",
+        "1x Doctor Shine Cadillac 250 ml",
+        "1x Tratamento de Couro Cadillac 250 ml"
+      ]
+    },
+    {
+      "inv": "KVTO49488",
+      "item_id": "MLB7725444614",
+      "sku": "CADILLAC_KIT_COURO_250",
+      "titulo": "Kit Limpa Couro 500ml E Hidratante De Couro 250ml Cadillac",
+      "passos": [
+        "1x Limpa Couro Cadillac 500 ml (com gatilho)",
+        "1x Tratamento de Couro Cadillac 250 ml"
+      ]
+    },
+    {
+      "inv": "CVLK48357",
+      "item_id": "MLB5321372427",
+      "sku": "CADILLAC_KIT_COURO_500",
+      "titulo": "Kit Limpa Couro E Hidratante De Couro Cadillac 500ml Banco",
+      "passos": [
+        "1x Limpa Couro Cadillac 500 ml (com gatilho)",
+        "1x Tratamento de Couro Cadillac 500 ml"
+      ]
+    },
+    {
+      "inv": "GYOH39429",
+      "item_id": "MLB7568210100",
+      "sku": "JACA_KIT_GRIME_SNAKE",
+      "titulo": "Kit Limpa Couro Jaça Grime Cleaner + Hidratante 500ml",
+      "passos": [
+        "1x Grime Cleaner Jaça 500 ml (limpador de couro)",
+        "1x Snake Leather Soft Jaça 500 ml (hidratante de couro)"
+      ]
+    },
+    {
+      "inv": "OJIO37038",
+      "item_id": "MLB5169195639",
+      "sku": "JACA_KIT_TYREX_BLACK_LEMON",
+      "titulo": "Kit Limpa Pneu Jaça Tyrex Pro + Pretinho Black Lemon 500ml",
+      "passos": [
+        "1x Tyrex Pro Jaça 500 ml",
+        "1x Black Lemon Jaça 500 ml"
+      ]
+    },
+    {
+      "inv": "YUPJ38828",
+      "item_id": "MLB7568210006",
+      "sku": "JACA_KIT_BLACK_LEMON_CARBON_BLACK",
+      "titulo": "Kit Pretinho Pneu Jaça Black Lemon + Carbon Black 500ml",
+      "passos": [
+        "1x Black Lemon Jaça 500 ml",
+        "1x Carbon Black Jaça 500 ml"
+      ]
+    },
+    {
+      "inv": "MNXD24425",
+      "item_id": "MLB4986541345",
+      "sku": "MAGIL_KIT_FG1L_UL115L",
+      "titulo": "Kit Lava Auto Foam Gloss 1l E Apc Ultra Limpador Magil Clean",
+      "passos": [
+        "1x Foam Gloss Magil Clean 1 L",
+        "1x Ultra Limpador AutoClean Magil Clean 1,15 L",
+        "1x Flanela de microfibra 40x60 cm"
+      ]
+    },
+    {
+      "inv": "SMKX24332",
+      "item_id": "MLB4993020101",
+      "sku": "MAGIL_KIT_FG1L_UL115L_BB500",
+      "titulo": "Kit Limpeza Automotiva Completo Magil Clean Lava Auto E Apc",
+      "passos": [
+        "1x Foam Gloss Magil Clean 1 L",
+        "1x Ultra Limpador AutoClean Magil Clean 1,15 L",
+        "1x Black Berry Magil Clean 500 ml",
+        "1x Flanela de microfibra 40x60 cm"
+      ]
+    },
+    {
+      "inv": "UYOI24129",
+      "item_id": "MLB7304622474",
+      "sku": "AA_KIT_FASTCUT_ONESTEP",
+      "titulo": "Kit Polimento Autoamerica One Step 3 Em 1 + Fast Cut 1kg",
+      "passos": [
+        "1x Fast Cut Autoamerica 1 kg",
+        "1x One Step 3 em 1 Autoamerica 1 kg",
+        "1x Flanela de microfibra Autoamerica 40x60 cm AMARELA"
+      ]
+    },
+    {
+      "inv": "VFHF24912",
+      "item_id": "MLB4975441785",
+      "sku": "AA_KIT_POLIMENTO_TRIO",
+      "titulo": "Kit Polimento Menzerna Autoamerica Corte Refino Lustro",
+      "passos": [
+        "1x Corte Líquido Autoamerica 500 g (etapa 1)",
+        "1x Refino 2000 Autoamerica/Menzerna 500 g (etapa 2)",
+        "1x Lustro 3000 Autoamerica/Menzerna 500 g (etapa 3)",
+        "1x Flanela de microfibra Autoamerica 40x60 cm AMARELA"
+      ]
+    },
+    {
+      "inv": "ZDDS24473",
+      "item_id": "MLB4980752213",
+      "sku": "CADILLAC_RISCO_ZERO_KIT",
+      "titulo": "Kit Polimento Cadillac Risco Zero Corte Refino Lustro 500g Claras E Escuras",
+      "passos": [
+        "1x Risco Zero CORTE 500 g",
+        "1x Risco Zero REFINO 500 g",
+        "1x Risco Zero LUSTRO 500 g",
+        "1x Flanela de microfibra Autoamerica AMARELA 60x40 cm"
+      ]
+    },
+    {
+      "inv": "GVSP76063",
+      "item_id": "MLB6631756028",
+      "sku": "CADILLAC_RISCO_ZERO_KIT",
+      "titulo": "Kit Polimento Risco Zero Corte Refino E Lustro 500g Cadillac Claras E Escuras",
+      "passos": [
+        "1x Risco Zero CORTE 500 g",
+        "1x Risco Zero REFINO 500 g",
+        "1x Risco Zero LUSTRO 500 g",
+        "NÃO colocar flanela (só o kit com os 3)"
+      ]
+    },
+    {
+      "inv": "ALKJ75616",
+      "item_id": "MLB4821244737",
+      "sku": "CADILLAC_RISCO_ZERO_KIT",
+      "titulo": "Kit Polimento Risco Zero Corte Refino Lustro 500gr Cadillac",
+      "passos": [
+        "1x Risco Zero CORTE 500 g",
+        "1x Risco Zero REFINO 500 g",
+        "1x Risco Zero LUSTRO 500 g",
+        "NÃO colocar flanela (só o kit com os 3)"
+      ]
+    },
+    {
+      "inv": "UNGV12761",
+      "item_id": "MLB7059038672",
+      "sku": "CADILLAC_VITRIFICADOR_DEFENSE",
+      "titulo": "Vitrificador Cerâmico Cadillac Defense Kit 50ml Coating Nano",
+      "passos": [
+        "1x Cadillac Defense 50 ml (frasco conta-gotas)",
+        "1x Cadillac Silac 100 ml (spray)",
+        "1x Aplicador de espuma Cadillac",
+        "1x Pano de microfibra Cadillac"
+      ]
+    },
+    {
+      "inv": "XRDX97439",
+      "item_id": "MLB7058441742",
+      "sku": "CADILLAC_VITRIFICADOR_DEFENSE",
+      "titulo": "Kit Vitrificador Defense 50ml Cadillac",
+      "passos": [
+        "1x Cadillac Defense 50 ml",
+        "1x Cadillac Silac 100 ml",
+        "2x Toalha de suede",
+        "1x Aplicador em EVA",
+        "1x Encarte de instruções"
+      ]
+    },
+    {
+      "inv": "PRYI49765",
+      "item_id": "MLB5311528963",
+      "sku": "KERS_W1000_KIT",
+      "titulo": "Politriz Nano Recarregável Kers W1000 12v Kit Completo Laranja 127/220v",
+      "passos": [
+        "1x Politriz Kers W1000 na maleta",
+        "2x Bateria 4,0 Ah",
+        "1x Carregador bivolt",
+        "Kits de boinas de 1\", 1,5\", 2\" e 3\"",
+        "1x Kit de boinas PS",
+        "1x Kit de acessórios Nano Híbrida",
+        "1x Adaptador M14"
+      ]
+    },
+    {
+      "inv": "HSGJ15293",
+      "item_id": "MLB7123887168",
+      "sku": "AA_TRIPLE_WAX_PASTA_100",
+      "titulo": "Cera Automotiva Pasta Autoamerica Triple Wax Carnaúba 100g",
+      "passos": [
+        "1x Cera Triple Wax Autoamerica 100 g (pote)",
+        "1x Aplicador de espuma",
+        "1x Flanela de microfibra CINZA 30x30 cm (brinde)"
+      ]
+    },
+    {
+      "inv": "GJVP99212",
+      "item_id": "MLB7123887498",
+      "sku": "AA_TRIPLE_WAX_PASTA_300",
+      "titulo": "Cera De Carnaúba Autoamerica Triple Wax Pasta 300g",
+      "passos": [
+        "1x Cera Triple Wax Autoamerica 300 g (pote)",
+        "1x Aplicador de espuma",
+        "1x Flanela de microfibra CINZA 30x30 cm (brinde)"
+      ]
+    },
+    {
+      "inv": "QQLL99824",
+      "item_id": "MLB4867202361",
+      "sku": "CADILLAC_ATOMIC_100G",
+      "titulo": "Cera Cadillac Atomic 100g Nova Fórmula Proteção 8 Meses",
+      "passos": [
+        "1x Cera Cadillac Atomic Future Ceramic Wax 100 g",
+        "1x Caixa Cadillac Atomic",
+        "1x Aplicador de espuma PRETO",
+        "1x Flanela de microfibra CINZA 30x30 cm"
+      ]
+    },
+    {
+      "inv": "JNII20678",
+      "item_id": "MLB4941690453",
+      "sku": "AA_GREEN_APC_500",
+      "titulo": "Apc Limpador Multiuso Automotivo Autoamerica Green 500ml",
+      "passos": [
+        "1x Green APC Autoamerica 500 ml (gatilho 2 em 1)",
+        "1x Flanela de microfibra"
+      ]
+    },
+    {
+      "inv": "JWVU37556",
+      "item_id": "MLB5131848707",
+      "sku": "KERS_SNOW_BLACK_1L",
+      "titulo": "Canhão De Espuma Snow Foam Kers Snow Black 1l 2 Copos",
+      "passos": [
+        "1x Canhão de espuma Kers Snow Black",
+        "2x Copo reservatório 1 L",
+        "1x Giclê reserva"
+      ]
+    },
+    {
+      "inv": "LGME36862",
+      "item_id": "MLB5134088683",
+      "sku": "KERS_CLEAR_CANNON_1L",
+      "titulo": "Canhão De Espuma Snow Foam Kers Clear Cannon 2.0 1l Laranja",
+      "passos": [
+        "1x Canhão de espuma Kers Clear Cannon Foam 2.0",
+        "1x Reservatório transparente 1 L"
+      ]
+    },
+    {
+      "inv": "SGAN49173",
+      "item_id": "MLB7724005198",
+      "sku": "KERS_ESCOVA_CS_5",
+      "titulo": "Escova Rotativa Para Estofado Kers Car Seat 5 Polegadas Laranja E Preto",
+      "passos": [
+        "1x Escova rotativa Kers Car Seat 5\"",
+        "1x Parafuso adaptador para furadeira e parafusadeira"
+      ]
+    },
+    {
+      "inv": "VCRS47233",
+      "item_id": "MLB7724005386",
+      "sku": "KERS_PINCEL_SUPER_SOFT",
+      "titulo": "Pincel Aplicador De Pretinho Para Pneu Kers Super Soft",
+      "passos": [
+        "1x Pincel aplicador Kers Super Soft",
+        "1x Suporte do pincel"
+      ]
+    },
+    {
+      "inv": "BOZZ48507",
+      "item_id": "MLB5311552363",
+      "sku": "KERS_POWER_FOAM_2L",
+      "titulo": "Pulverizador Manual De Espuma 2l Reks Power Foam Kers Verde",
+      "passos": [
+        "1x Pulverizador Reks Power Foam 2 L",
+        "1x Bico gerador de espuma",
+        "1x Bico de pulverização (jato regulável)"
+      ]
+    },
+    {
+      "inv": "QEKV36843",
+      "item_id": "MLB5134159901",
+      "sku": "KERS_SPEED_CLEAN_2L",
+      "titulo": "Pulverizador Manual Kers Speed Clean 2l 3 Bicos Espuma Laranja E Preto",
+      "passos": [
+        "1x Pulverizador Kers Speed Clean 2 L",
+        "1x Bico CHUVA",
+        "1x Bico ESPUMA",
+        "1x Bico SPRAY"
+      ]
+    },
+    {
+      "inv": "PNUJ29622",
+      "item_id": "MLB5068802029",
+      "sku": "AA_PULVERIZADOR_2L",
+      "titulo": "Pulverizador Snow Foam Manual 2l Autoamerica 2 Bicos Espuma Azul E Preto",
+      "passos": [
+        "1x Pulverizador Autoamerica 2 L com alça",
+        "1x Bico snow foam",
+        "1x Bico padrão",
+        "1x Aerador"
+      ]
+    },
+    {
+      "inv": "ROXP49125",
+      "item_id": "MLB5325183285",
+      "sku": "NACAO_SNOW_HOBBY_1L",
+      "titulo": "Snow Foam Canhão De Espuma Nação Detail Hobby Bocal 28mm",
+      "passos": [
+        "1x Canhão Snow Foam Nação Detail Hobby Edition",
+        "1x Garrafa 1 L, bocal 28 mm",
+        "Giclê 1,2 mm AZUL instalado + giclês 1,1 mm AMARELO e 1,4 mm VERMELHO avulsos",
+        "1x Adaptador de engate rápido macho"
+      ]
+    },
+    {
+      "inv": "GREL51980",
+      "item_id": "MLB5360555525",
+      "sku": "NACAO_SNOW_HOBBY_PRO",
+      "titulo": "Snow Foam Nação Detail Hobby Pro Edition Garrafa Bocal 48mm Azul",
+      "passos": [
+        "1x Canhão Snow Foam Nação Detail Hobby PRO Edition",
+        "1x Garrafa 1 L, bocal 48 mm",
+        "Giclê 1,2 mm AZUL instalado + giclês 1,1 mm AMARELO e 1,4 mm VERMELHO avulsos",
+        "1x Adaptador de engate rápido macho"
+      ]
+    },
+    {
+      "inv": "REJC36469",
+      "item_id": "MLB7514074492",
+      "sku": "KERS_BREEZE_100ML",
+      "titulo": "Snow Foam Kers Breeze Sucção E Gravidade 100ml 2 Copos Laranja",
+      "passos": [
+        "1x Snow foam Kers Breeze",
+        "2x Copo 100 ml"
+      ]
+    },
+    {
+      "inv": "CJZD24563",
+      "item_id": "MLB4976568059",
+      "sku": "CADILLAC_NANO_ONE",
+      "titulo": "Vitrificador Nano One Cadillac 50ml Proteção Nanocerâmica",
+      "passos": [
+        "1x Nano One Cadillac 50 ml",
+        "1x Válvula borrifadora (spray)",
+        "1x Toalha de microfibra Cadillac AMARELA 40x40 cm",
+        "1x Folder instrutivo",
+        "2x Adesivo de controle de aplicação"
+      ]
+    }
   ]
 }

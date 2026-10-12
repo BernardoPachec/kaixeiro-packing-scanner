@@ -654,6 +654,7 @@ function renderEnvio() {
               <div style="display:flex;gap:6px;flex-wrap:wrap">
                 <span class="chip ${precisaEtiqueta(it) ? "y" : ""}">${precisaEtiqueta(it) ? "ETIQUETAGEM" : "CÓDIGO UNIVERSAL"}</span>
                 ${ckEtq(it)?.kit ? `<span class="chip y">KIT · ${passosDe(it).length} ITENS</span>` : ""}
+                ${ckEtq(it) ? "" : '<span class="chip">SEM CHECKLIST</span>'}
                 ${it.ean ? "" : '<span class="chip">SEM EAN</span>'}
                 ${(it.tags || []).map((t) => `<span class="chip">${esc(t)}</span>`).join("")}
               </div>
@@ -850,12 +851,14 @@ async function onRead(slot, code) {
 //
 // O checklist é por ETIQUETA (Código ML), não por SKU: anúncios com o mesmo SKU podem levar
 // coisas diferentes (pistola com e sem bicos, cera com e sem flanela). Só tem checklist o
-// anúncio que é kit ou que leva algo além do produto ("+ flanela" etc.). Produto simples não
-// tem passo nenhum: um checklist genérico fazia mandar flanela onde não devia (pedido do
-// Bernardo, 12/10/2026).
+// anúncio que é kit ou que leva algo além do produto ("+ flanela" etc.). Sem cadastro, a tela
+// NUNCA presume "só o produto": diz que não tem informação e pede para conferir o anúncio
+// (o Triple Wax 100g aparecia como sem flanela e leva flanela de brinde). Checklist salvo com
+// a lista vazia = vocês confirmaram que vai só o produto. (Bernardo, 12/10/2026)
 const EQUIPE = ["Douglas", "Ber", "Wilson", "Cássia", "Giulia"];
+const CONFERIR_ANUNCIO = "Conferi no anúncio o que vai neste pacote";
 const ckEtq = (it) => (S.checklistsEtq || {})[it.inv] || null;
-const passosDe = (it) => ckEtq(it)?.passos || [];
+const passosDe = (it) => { const ck = ckEtq(it); return ck ? ck.passos || [] : [CONFERIR_ANUNCIO]; };
 function modoDe(it) {
   if (/universal/i.test(it.identificacao || "")) return "universal";
   if (ckEtq(it)?.kit) return "kit";
@@ -867,17 +870,19 @@ function checklistHtml(it, R) {
   const todos = passos.every((_, k) => feitos.has(k));
   const ck = ckEtq(it);
   const travado = R && R.state === "bad";
-  const titulo = !passos.length ? "Produto simples" : ck?.kit ? "O que vai neste anúncio" : "Checklist da embalagem";
+  const titulo = !ck ? "Sem checklist cadastrado" : !passos.length ? "Produto simples" : ck.kit ? "O que vai neste anúncio" : "Checklist da embalagem";
   return `
-    <section class="check">
+    <section class="check" ${ck ? "" : 'style="border-color:var(--y)"'}>
       <div class="check-head">
         <span class="eyebrow">${titulo}</span>
       </div>
-      ${ck && !ck.revisado && passos.length ? `<span style="font-size:12px;color:var(--y)">Montado a partir da descrição do anúncio. Confira na primeira vez e salve em "editar" para marcar como revisado.</span>` : ""}
+      ${!ck ? `<p style="margin:0;font-size:18px;line-height:1.4"><b style="color:var(--y)">Não tenho informação sobre o checklist deste anúncio.</b> Abra o anúncio e confira o que vai junto antes de embalar. Depois, cadastre em "alterar checklist" no fim da página.</p>
+        ${it.permalink ? `<a href="${esc(it.permalink)}" target="_blank" rel="noopener" style="font-size:15px">Ver anúncio ${esc(it.item_id || "")} ↗</a>` : ""}` : ""}
+      ${ck && !ck.revisado && passos.length ? `<span style="font-size:12px;color:var(--y)">Montado a partir da descrição do anúncio. Confira na primeira vez e salve em "alterar checklist" para marcar como revisado.</span>` : ""}
       ${passos.length ? passos.map((p, k) => `
         <button class="check-item ${feitos.has(k) ? "on" : ""}" onclick="togglePasso(${k})">
           <span class="box">${feitos.has(k) ? "✓" : ""}</span><span>${esc(p)}</span>
-        </button>`).join("") : `<p style="margin:0;font-size:18px;line-height:1.4">Vai <b>só o produto</b> deste anúncio. <b style="color:var(--y)">Não colocar</b> flanela, aplicador nem outro item.</p>`}
+        </button>`).join("") : `<p style="margin:0;font-size:18px;line-height:1.4">Vai <b>só o produto</b> deste anúncio (cadastrado por vocês). <b style="color:var(--y)">Não colocar</b> flanela, aplicador nem outro item.</p>`}
       <button class="btn btn-done" ${todos && !travado ? "" : "disabled"} onclick="openQuem()">Marcar como feito</button>
       ${travado ? `<span style="font-size:13px;color:var(--badtxt);text-align:center">Leitura errada: separe a unidade e toque em "Ler de novo".</span>`
         : todos ? "" : `<span style="font-size:13px;color:var(--muted);text-align:center">Marque ${passos.length - feitos.size} item(ns) para liberar.</span>`}
@@ -917,7 +922,8 @@ function editChecklist() {
   IMP = {};
   $("impBody").innerHTML = `
     <p style="margin:0;font-size:14px;color:#cfcfcf">Itens e passos da etiqueta <b class="mono">${esc(it.inv)}</b>, um por linha. Vale <b>só para este anúncio</b> (outros anúncios com o mesmo SKU têm o checklist deles). Deixe vazio se não precisa de nada.</p>
-    <textarea id="ckText" class="minput" style="height:220px;padding:10px;font-family:var(--fb);font-size:16px;line-height:1.5">${esc(passosDe(it).join("\n"))}</textarea>
+    <textarea id="ckText" class="minput" style="height:220px;padding:10px;font-family:var(--fb);font-size:16px;line-height:1.5" placeholder="Ex.: 1x Cera Triple Wax 100 g&#10;1x Aplicador de espuma&#10;1x Flanela cinza 30x30">${esc((ck?.passos || []).join("\n"))}</textarea>
+    <p style="margin:0;font-size:12px;color:var(--muted)">Salvar com a lista vazia = confirmar que vai <b>só o produto</b>. Fica gravado para os próximos envios deste anúncio.</p>
     <label style="display:flex;gap:10px;align-items:center;font-size:14px;color:#cfcfcf"><input type="checkbox" id="ckKit" ${ck?.kit ? "checked" : ""} style="width:18px;height:18px;accent-color:var(--y)"> Anúncio com mais de um item (kit): sem leitura do código do produto</label>
     <button class="btn" id="ckGo" onclick="saveChecklist()">Salvar e marcar como revisado</button>`;
   show("impModal");
