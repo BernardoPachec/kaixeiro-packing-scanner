@@ -129,6 +129,22 @@
   .toggles label{display:flex;gap:8px;align-items:center;cursor:pointer}
   .toggles input{accent-color:var(--y);width:16px;height:16px}
 
+  /* Checklist da embalagem (aparece quando produto e etiqueta batem) */
+  .check{border:1px solid var(--ok);padding:20px;display:flex;flex-direction:column;gap:12px}
+  .check-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+  .check-head a{font-size:13px}
+  .check-item{display:flex;align-items:center;gap:18px;width:100%;text-align:left;background:#000;border:1px solid var(--line2);color:#fff;padding:18px 20px;font:600 26px/1.15 var(--fh);text-transform:uppercase;letter-spacing:.03em;cursor:pointer}
+  .check-item:hover{border-color:#555}
+  .check-item .box{flex:none;width:40px;height:40px;border:2px solid var(--y);display:flex;align-items:center;justify-content:center;font:700 28px/1 var(--fh);color:#000}
+  .check-item.on{border-color:var(--ok);background:var(--okbg);color:var(--ok)}
+  .check-item.on .box{background:var(--ok);border-color:var(--ok)}
+  .btn-done{height:76px;width:100%;font-size:26px;letter-spacing:.12em}
+  .btn-done:disabled{background:var(--s4);border-color:var(--line2);color:var(--dim);opacity:1}
+  .quem-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .quem-grid button{height:68px;background:#000;border:1px solid var(--line2);color:#fff;font:600 24px var(--fh);letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+  .quem-grid button:hover{border-color:var(--y);color:var(--y)}
+  .quem-grid button.last{border-color:var(--y)}
+
   /* Modais */
   .modal{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center;padding:16px}
   .mbox{width:100%;max-width:460px;max-height:calc(100vh - 32px);overflow:auto;border:1px solid var(--line2);background:var(--s1);display:flex;flex-direction:column}
@@ -212,6 +228,20 @@
   <div class="mbox wide">
     <div class="mhead"><span>Importar envio</span><button onclick="closeImport()" aria-label="Fechar">×</button></div>
     <div class="mbody" id="impBody"></div>
+  </div>
+</div>
+
+<!-- Quem etiquetou (depois de "Marcar como feito") -->
+<div class="modal hidden" id="quemModal">
+  <div class="mbox">
+    <div class="mhead"><span>Quem etiquetou?</span><button onclick="hide('quemModal')" aria-label="Fechar">×</button></div>
+    <div class="mbody">
+      <div class="quem-grid" id="quemGrid"></div>
+      <div style="display:flex;gap:8px">
+        <input class="minput" id="quemOutro" placeholder="Outro: digite o nome" style="font-family:var(--fb);font-size:18px;height:56px">
+        <button class="btn" style="height:56px" onclick="pickQuem($('quemOutro').value)">Outro</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -555,7 +585,7 @@ async function confirmImport() {
 // ---------- Tela 02: produtos do envio ----------
 async function loadEnvio(frete) {
   const d = await apiGet("?frete=" + encodeURIComponent(frete));
-  S.envio = d.envio; S.itens = d.itens; S.leituras = d.leituras;
+  S.envio = d.envio; S.itens = d.itens; S.leituras = d.leituras; S.checklists = d.checklists || {};
 }
 function itemStatus(it) {
   if (it.conferidas >= it.unidades) return ["Conferido", "var(--ok)"];
@@ -630,7 +660,7 @@ function renderEnvio() {
     </div>
 
     ${S.leituras.length ? `<div class="log"><span class="lbl">Últimas leituras</span>${S.leituras.slice(0, 12).map((l) =>
-      `<span>${new Date(l.criado_em).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })} · <b style="color:${l.resultado === "ok" ? "var(--ok)" : l.resultado === "divergente" ? "var(--badtxt)" : "var(--muted)"}">${esc(l.resultado)}</b> · ${esc(l.inv || "—")} ${l.detalhe ? "· " + esc(l.detalhe) : ""}</span>`).join("")}</div>` : ""}
+      `<span>${new Date(l.criado_em).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })} · <b style="color:${l.resultado === "ok" ? "var(--ok)" : l.resultado === "divergente" ? "var(--badtxt)" : "var(--muted)"}">${esc(l.resultado)}</b> · ${esc(l.inv || "—")} ${l.responsavel ? "· por <b>" + esc(l.responsavel) + "</b>" : ""} ${l.detalhe ? "· " + esc(l.detalhe) : ""}</span>`).join("")}</div>` : ""}
   </main>`;
 }
 
@@ -664,7 +694,7 @@ async function delEnvio() {
 function curItem() { return S.itens.find((i) => i.inv === S.inv); }
 
 function renderProduto(inv) {
-  if (S.inv !== inv) { S.inv = inv; S.prod = null; S.etq = null; S.manualProd = false; }
+  if (S.inv !== inv) { S.inv = inv; S.prod = null; S.etq = null; S.manualProd = false; S.feitos = new Set(); }
   const it = curItem(), e = S.envio, F = encodeURIComponent(e.frete);
   if (!it) { $("view").innerHTML = `<main class="narrow"><div class="err">Código ML ${esc(inv)} não está no envio #${esc(e.frete)}.</div><a href="#/envio/${F}">← Voltar ao envio</a></main>`; return; }
   crumb([{ t: "Envios", href: "#/" }, { t: "#" + e.frete, href: "#/envio/" + F }, { t: it.sku || it.inv }]);
@@ -716,11 +746,12 @@ function renderProduto(inv) {
     <section class="result" style="border-color:${R.border};background:${R.bg}">
       <span class="dot" style="background:${R.dot};color:${R.dotFg}">${R.glyph}</span>
       <div class="txt"><span class="t" style="color:${R.titleColor}">${esc(R.title)}</span><span class="d">${R.text}</span></div>
-      ${R.state === "ok" ? `<button class="btn" id="btnConfirm" onclick="confirmUnit()">Próxima unidade</button>` : ""}
-      ${R.state === "bad" ? `<button class="btn white" onclick="resetReads()">Ler de novo</button>` : ""}
+      ${R.state === "bad" || R.state === "ok" ? `<button class="btn white" onclick="resetReads()">Ler de novo</button>` : ""}
       ${R.state === "full" && prox ? `<button class="btn" onclick="go('#/envio/${F}/${prox.inv}')">Próximo pendente</button>` : ""}
       ${R.state === "full" && !prox ? `<button class="btn" onclick="go('#/envio/${F}')">Ver envio</button>` : ""}
     </section>
+
+    ${R.state === "ok" ? checklistHtml(it) : ""}
 
     <div class="counter">
       <span style="white-space:nowrap;font-size:14px;color:var(--muted)">Conferidas <strong>${fmt(it.conferidas)}</strong> de ${fmt(it.unidades)}</span>
@@ -733,7 +764,6 @@ function renderProduto(inv) {
     </div>
 
     <div class="toggles">
-      <label><input type="checkbox" ${pref("auto", false) ? "checked" : ""} onchange="setPref('auto',this.checked)"> Somar sozinho quando bater</label>
       <label><input type="checkbox" ${pref("reopen", true) ? "checked" : ""} onchange="setPref('reopen',this.checked)"> Reabrir a câmera depois de cada unidade</label>
     </div>
   </main>`;
@@ -756,7 +786,7 @@ function evaluate(it) {
     return { ...base, state: "bad", border: "var(--bad)", bg: "var(--badbg)", dot: "var(--bad)", dotFg: "#000", glyph: "!", titleColor: "var(--badtxt)", title: "Não confere", text: quem.join(" ") + " Separe a unidade e confira." };
   }
   if (pOk && eOk)
-    return { ...base, state: "ok", border: "var(--ok)", bg: "var(--okbg)", dot: "var(--ok)", dotFg: "#000", glyph: "✓", titleColor: "var(--ok)", title: "Mesmo produto", text: needEtq ? "Produto e etiqueta batem. Pode embalar essa unidade." : "Código universal confere (este produto não leva etiqueta). Pode embalar." };
+    return { ...base, state: "ok", border: "var(--ok)", bg: "var(--okbg)", dot: "var(--ok)", dotFg: "#000", glyph: "✓", titleColor: "var(--ok)", title: "Mesmo produto", text: (needEtq ? "Produto e etiqueta batem." : "Código universal confere (este produto não leva etiqueta).") + " Pode embalar: siga o checklist abaixo." };
   if (S.prod || S.manualProd || S.etq)
     return { ...base, state: "half", border: Y, bg: "transparent", dot: Y, dotFg: "#000", glyph: "1", titleColor: Y, title: "Falta uma leitura", text: S.etq ? "Etiqueta lida. Agora leia o código do produto." : "Produto lido. Cole a etiqueta do ML e leia a etiqueta." };
   return { ...base, state: "idle", border: "var(--line2)", bg: "transparent", dot: "var(--s4)", dotFg: "var(--muted)", glyph: "?", titleColor: "#fff", title: "Aguardando leitura",
@@ -767,6 +797,7 @@ let busy = false;
 async function onRead(slot, code) {
   const it = curItem(); if (!it) return;
   if (slot === "prod") { S.prod = norm(code); S.manualProd = false; } else S.etq = norm(code);
+  S.feitos = new Set(); // leitura nova = unidade nova: checklist começa do zero
   const R = evaluate(it);
   if (R.state === "bad") {
     beep(false);
@@ -776,8 +807,9 @@ async function onRead(slot, code) {
   }
   if (R.state === "ok") {
     beep(true);
-    if (pref("auto", false)) return confirmUnit();
-    renderProduto(it.inv); return;
+    renderProduto(it.inv);
+    document.querySelector(".check")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
   }
   beep(true);
   renderProduto(it.inv);
@@ -786,16 +818,82 @@ async function onRead(slot, code) {
   if (next) openScanner(next);
 }
 
-async function confirmUnit() {
+// ---------- Checklist da embalagem + quem etiquetou ----------
+// Bater produto e etiqueta só libera a embalagem. A unidade só conta depois do checklist
+// completo, de "Marcar como feito" e de escolher quem etiquetou.
+// Passos padrão até cada produto ganhar o seu ("editar deste produto").
+const PASSOS_PADRAO = ["Colocar batoque", "Colocar etiqueta de batoque", "Passar fita", "Colocar flanela"];
+const EQUIPE = ["Douglas", "Ber", "Wilson", "Cássia", "Giulia"];
+const passosDe = (it) => (it.sku && S.checklists && S.checklists[it.sku]) || PASSOS_PADRAO;
+
+function checklistHtml(it) {
+  const passos = passosDe(it), feitos = S.feitos || new Set();
+  const todos = passos.every((_, k) => feitos.has(k));
+  const proprio = it.sku && S.checklists && S.checklists[it.sku];
+  return `
+    <section class="check">
+      <div class="check-head">
+        <span class="eyebrow">Checklist da embalagem${proprio ? "" : " · padrão"}</span>
+        <a href="javascript:editChecklist()">editar deste produto</a>
+      </div>
+      ${passos.length ? passos.map((p, k) => `
+        <button class="check-item ${feitos.has(k) ? "on" : ""}" onclick="togglePasso(${k})">
+          <span class="box">${feitos.has(k) ? "✓" : ""}</span><span>${esc(p)}</span>
+        </button>`).join("") : '<p style="margin:0;color:var(--muted)">Este produto não tem passos de embalagem.</p>'}
+      <button class="btn btn-done" ${todos ? "" : "disabled"} onclick="openQuem()">Marcar como feito</button>
+      ${todos ? "" : `<span style="font-size:13px;color:var(--muted);text-align:center">Marque ${passos.length - feitos.size} passo(s) para liberar.</span>`}
+    </section>`;
+}
+function togglePasso(k) {
+  S.feitos = S.feitos || new Set();
+  S.feitos.has(k) ? S.feitos.delete(k) : S.feitos.add(k);
+  const y = window.scrollY; renderProduto(S.inv); window.scrollTo(0, y);
+}
+function openQuem() {
+  let ultimo = ""; try { ultimo = localStorage.getItem("kxfull.quem") || ""; $("quemOutro").value = localStorage.getItem("kxfull.outro") || ""; } catch {}
+  $("quemGrid").innerHTML = EQUIPE.map((n) => `<button class="${n === ultimo ? "last" : ""}" onclick="pickQuem('${n}')">${n}</button>`).join("");
+  show("quemModal");
+}
+function pickQuem(nome) {
+  nome = String(nome || "").trim();
+  if (!nome) return toast("Digite o nome em \"Outro\".");
+  try { localStorage.setItem("kxfull.quem", nome); if (!EQUIPE.includes(nome)) localStorage.setItem("kxfull.outro", nome); } catch {}
+  hide("quemModal");
+  confirmUnit(nome);
+}
+function editChecklist() {
+  const it = curItem(); if (!it) return;
+  if (!it.sku) return toast("Este produto não tem SKU para guardar o checklist.");
+  IMP = {};
+  $("impBody").innerHTML = `
+    <p style="margin:0;font-size:14px;color:#cfcfcf">Passos de embalagem do <b class="mono">${esc(it.sku)}</b>, um por linha. Valem para todos os envios deste SKU. Deixe vazio se o produto não precisa de nada.</p>
+    <textarea id="ckText" class="minput" style="height:200px;padding:10px;font-family:var(--fb);font-size:16px;line-height:1.5">${esc(passosDe(it).join("\n"))}</textarea>
+    <button class="btn" id="ckGo" onclick="saveChecklist()">Salvar checklist</button>`;
+  show("impModal");
+}
+async function saveChecklist() {
+  const it = curItem(), btn = $("ckGo");
+  btn.disabled = true; btn.textContent = "Salvando…";
+  try {
+    const r = await api({ acao: "checklist", sku: it.sku, passos: $("ckText").value.split("\n") });
+    S.checklists = { ...(S.checklists || {}), [it.sku]: r.passos };
+    S.feitos = new Set(); closeImport(); renderProduto(it.inv); toast("Checklist salvo.");
+  } catch (e) { btn.disabled = false; btn.textContent = "Tentar de novo"; toast(e.message, 5000); }
+}
+
+async function confirmUnit(responsavel) {
   const it = curItem(); if (!it || busy) return;
   busy = true;
-  const btn = $("btnConfirm"); if (btn) { btn.disabled = true; btn.textContent = "Somando…"; }
+  const btn = document.querySelector(".btn-done"); if (btn) { btn.disabled = true; btn.textContent = "Salvando…"; }
+  const passos = passosDe(it).filter((_, k) => (S.feitos || new Set()).has(k));
   try {
-    const r = await api({ acao: "conferir", frete: S.envio.frete, inv: it.inv, delta: 1, codigo_produto: S.manualProd ? "(visual)" : S.prod, codigo_etiqueta: S.etq, resultado: S.manualProd ? "manual" : "ok" });
+    const r = await api({ acao: "conferir", frete: S.envio.frete, inv: it.inv, delta: 1, codigo_produto: S.manualProd ? "(visual)" : S.prod,
+      codigo_etiqueta: S.etq, resultado: S.manualProd ? "manual" : "ok", responsavel, passos });
     it.conferidas = r.conferidas;
-    S.prod = null; S.etq = null; S.manualProd = false;
+    S.prod = null; S.etq = null; S.manualProd = false; S.feitos = new Set();
+    window.scrollTo(0, 0);
     renderProduto(it.inv);
-    toast(`Unidade ${fmt(it.conferidas)} de ${fmt(it.unidades)} conferida`, 1400);
+    toast(`Unidade ${fmt(it.conferidas)} de ${fmt(it.unidades)} feita por ${responsavel}`, 1800);
     if (it.conferidas < it.unidades && pref("reopen", true)) openScanner("prod");
     else if (it.conferidas >= it.unidades) beep(true);
   } catch (e) { toast("Não somou: " + e.message, 5000); renderProduto(it.inv); }
@@ -808,7 +906,7 @@ async function undoUnit() {
     it.conferidas = r.conferidas; renderProduto(it.inv);
   } catch (e) { toast(e.message, 5000); }
 }
-function resetReads() { S.prod = null; S.etq = null; S.manualProd = false; renderProduto(S.inv); }
+function resetReads() { S.prod = null; S.etq = null; S.manualProd = false; S.feitos = new Set(); renderProduto(S.inv); }
 function manualProduct() {
   if (!confirm("Este produto não tem EAN no PDF nem no anúncio. Confirma que conferiu pelo nome/foto que é este produto?")) return;
   S.manualProd = true; renderProduto(S.inv);
@@ -893,7 +991,7 @@ async function deliver(code) {
 // Na Tela 03 vai para a leitura que falta; na Tela 02 acha o produto.
 let kb = "", kbAt = 0;
 document.addEventListener("keydown", (ev) => {
-  if (!$("scanModal").classList.contains("hidden")) return;
+  if (!$("scanModal").classList.contains("hidden") || !$("quemModal").classList.contains("hidden")) return;
   if (/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || "")) return;
   const now = Date.now();
   if (now - kbAt > 80) kb = "";

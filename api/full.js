@@ -13,6 +13,8 @@
 // POST /api/full { acao:"enriquecer", frete }          -> foto/MLB/GTIN pela API do ML
 // POST /api/full { acao:"conferir", frete, inv, delta, codigo_produto, codigo_etiqueta, resultado }
 // POST /api/full { acao:"leitura", frete, inv, codigo_produto, codigo_etiqueta, resultado, detalhe }
+// POST /api/full { acao:"checklist", sku, passos:[...] }  -> checklist de embalagem do produto
+//      ("conferir" aceita também responsavel e passos: quem embalou e o que foi feito)
 // POST /api/full { acao:"editar", frete, centro?, data_coleta?, status? }
 // POST /api/full { acao:"excluir", frete }
 
@@ -73,7 +75,14 @@ async function detalhe(frete) {
     "full_leituras",
     `frete=eq.${enc(frete)}&select=*&order=criado_em.desc&limit=50`
   );
-  return { envio, itens, leituras };
+  // Checklist de embalagem por SKU (batoque, fita, flanela...). Sem cadastro = padrão da tela.
+  const skus = [...new Set(itens.map((i) => i.sku).filter(Boolean))];
+  const checklists = {};
+  if (skus.length) {
+    const lista = skus.map((s) => `"${s.replace(/"/g, "")}"`).join(",");
+    for (const c of await sbSelect("full_checklists", `sku=in.(${enc(lista)})&select=sku,passos`)) checklists[c.sku] = c.passos || [];
+  }
+  return { envio, itens, leituras, checklists };
 }
 
 // ---- Importar (PDF/CSV já lidos no navegador) ----------------------------------
@@ -227,6 +236,8 @@ async function registrarLeitura(b) {
     codigo_etiqueta: clean(b.codigo_etiqueta),
     resultado: b.resultado,
     detalhe: clean(b.detalhe),
+    responsavel: clean(b.responsavel),            // quem embalou/etiquetou a unidade
+    passos: Array.isArray(b.passos) ? b.passos.map(String) : null,
   }]);
 }
 
@@ -280,6 +291,14 @@ module.exports = async (req, res) => {
         const conferidas = Array.isArray(r) ? r[0] : r;
         await registrarLeitura({ ...b, resultado: b.resultado || (delta > 0 ? "ok" : "desfeito") });
         return send(res, 200, { ok: true, conferidas });
+      }
+
+      case "checklist": {
+        const sku = clean(b.sku);
+        if (!sku) return send(res, 400, { ok: false, error: "sku é obrigatório." });
+        const passos = (b.passos || []).map((p) => String(p).trim()).filter(Boolean).slice(0, 20);
+        await sbUpsert("full_checklists", [{ sku, passos, atualizado_em: new Date().toISOString() }], "sku");
+        return send(res, 200, { ok: true, passos });
       }
 
       case "leitura":

@@ -65,3 +65,19 @@ $$;
 alter table full_envios      enable row level security;
 alter table full_envio_itens enable row level security;
 alter table full_leituras    enable row level security;
+
+-- ============================================================
+--  Adição de 12/10/2026: checklist de embalagem e quem etiquetou
+-- ============================================================
+
+-- 6) Checklist por produto (SKU): o que fazer em cada unidade antes de "marcar como feito".
+create table if not exists full_checklists (
+  sku            text primary key,
+  passos         text[] not null default '{}',   -- ex.: {Colocar batoque,Passar fita}
+  atualizado_em  timestamptz default now()
+);
+alter table full_checklists enable row level security;
+
+-- 7) Em cada unidade feita: quem etiquetou e quais passos foram marcados.
+alter table full_leituras add column if not exists responsavel text;
+alter table full_leituras add column if not exists passos text[];
