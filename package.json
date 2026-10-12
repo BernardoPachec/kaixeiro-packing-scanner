@@ -6,5 +6,5 @@
   "scripts": {
     "seed": "node scripts/seed_token.js"
   },
-  "engines": { "node": "20.x" }
+  "engines": { "node": "24.x" }
 }
