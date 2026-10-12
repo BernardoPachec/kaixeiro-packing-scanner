@@ -56,6 +56,26 @@ async function sbInsertIfNew(table, row, conflictCol) {
   return data.length > 0;
 }
 
+async function sbDelete(table, query) {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, {
+    method: "DELETE",
+    headers: { ...sbHeaders(), Prefer: "return=representation" },
+  });
+  if (!r.ok) throw new Error(`Supabase delete ${table}: ${r.status} ${await r.text()}`);
+  return r.json();
+}
+
+// Chama uma função SQL (ex.: full_conferir) via PostgREST.
+async function sbRpc(fn, args) {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+    method: "POST",
+    headers: sbHeaders(),
+    body: JSON.stringify(args),
+  });
+  if (!r.ok) throw new Error(`Supabase rpc ${fn}: ${r.status} ${await r.text()}`);
+  return r.json();
+}
+
 // ---- Token ML ---------------------------------------------------------------
 
 async function readTokenRow() {
@@ -232,6 +252,8 @@ function parseShipmentIdFromQR(raw) {
 }
 
 module.exports = {
+  readTokenRow,
+  mlFetchWithToken,
   mlFetch,
   mlPost,
   getShipment,
@@ -240,5 +262,7 @@ module.exports = {
   sbSelect,
   sbUpsert,
   sbInsertIfNew,
+  sbDelete,
+  sbRpc,
   LOGISTIC_LABELS,
 };

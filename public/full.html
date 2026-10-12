@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<meta name="theme-color" content="#000000" />
+<title>Kaixeiro · Scanner Full</title>
+<link rel="manifest" href="manifest.json" />
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
+<link rel="icon" type="image/png" href="icon-192.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="full-pdf.js"></script>
+<style>
+  /* Identidade Kaixeiro: preto, amarelo #F3AA07 e branco. Verde e vermelho só como sinal
+     de status (confere / não confere), conforme o protótipo do Claude Design. */
+  :root{
+    --bg:#000; --s1:#0A0A0A; --s2:#111; --s3:#161616; --s4:#1A1A1A;
+    --line:#262626; --line2:#333; --txt:#fff; --muted:#9a9a9a; --dim:#6b6b6b;
+    --y:#F3AA07; --y2:#FFD04A; --ok:#3ecf6e; --okbg:#0b2415; --bad:#ff5a5a; --badtxt:#ff6b6b; --badbg:#2a0d0d;
+    --fh:"Barlow Condensed",system-ui,sans-serif; --fb:"Barlow",system-ui,sans-serif;
+    --mono:ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;background:var(--bg);color:var(--txt);font-family:var(--fb);font-size:15px;line-height:1.45}
+  a{color:var(--y);text-decoration:none} a:hover{color:var(--y2)}
+  button{font-family:inherit}
+  .hidden{display:none !important}
+  .mono{font-family:var(--mono)}
+  .eyebrow{font:500 13px var(--fh);letter-spacing:.2em;text-transform:uppercase;color:var(--y)}
+  .h1{margin:0;font:600 44px/1 var(--fh);text-transform:uppercase;letter-spacing:.01em}
+  .sub{margin:0;color:var(--muted);font-size:15px}
+  .lbl{font:500 12px var(--fh);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+
+  header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 24px;border-bottom:1px solid var(--line);background:#000;position:sticky;top:0;z-index:5;flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:12px;cursor:pointer}
+  .brand svg{height:34px;width:auto;display:block}
+  .brand span{font:500 11px/1 var(--fh);letter-spacing:.2em;text-transform:uppercase;color:var(--y)}
+  nav.crumb{display:flex;align-items:center;gap:8px;font:500 14px var(--fh);letter-spacing:.06em;text-transform:uppercase;flex-wrap:wrap}
+  nav.crumb a{color:var(--muted)} nav.crumb a:hover{color:#fff} nav.crumb .sep{color:#444} nav.crumb .cur{color:#fff}
+  .back-app{font:500 13px var(--fh);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line2);padding:7px 12px}
+  .back-app:hover{color:#fff;border-color:#555}
+
+  main{width:100%;max-width:1280px;margin:0 auto;padding:32px 24px 72px;display:flex;flex-direction:column;gap:24px}
+  main.narrow{max-width:720px}
+  .head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+  .head > div{display:flex;flex-direction:column;gap:6px}
+
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:44px;padding:0 18px;border:1px solid var(--y);background:var(--y);color:#000;font:600 14px var(--fh);letter-spacing:.1em;text-transform:uppercase;cursor:pointer;white-space:nowrap}
+  .btn:hover{background:var(--y2)}
+  .btn.ghost{background:transparent;color:var(--y)} .btn.ghost:hover{background:var(--s4)}
+  .btn.white{background:transparent;color:#fff;border-color:#fff} .btn.white:hover{background:var(--s4)}
+  .btn.quiet{background:transparent;color:var(--muted);border-color:var(--line2)} .btn.quiet:hover{color:#fff;border-color:#555}
+  .btn.sm{height:36px;padding:0 12px;font-size:12px}
+  .btn:disabled{opacity:.45;cursor:default}
+
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));border:1px solid var(--line)}
+  .kpis > div{padding:18px 22px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:6px}
+  .kpis b{font:600 40px/1 var(--fh)}
+  .kpis span{font-size:13px;color:var(--muted)}
+
+  .tools{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .search{flex:1 1 260px;max-width:420px;display:flex;align-items:center;gap:10px;border:1px solid var(--line2);padding:0 14px;height:44px}
+  .search input{flex:1;background:transparent;border:0;outline:0;color:#fff;font:15px var(--fb);min-width:0}
+  input::placeholder{color:var(--dim)}
+  .seg{display:flex;border:1px solid var(--line2)}
+  .seg button{background:transparent;color:#cfcfcf;border:0;padding:0 16px;height:42px;font:500 14px var(--fh);letter-spacing:.08em;text-transform:uppercase;cursor:pointer;white-space:nowrap}
+  .seg button.on{background:var(--y);color:#000}
+
+  .table{border:1px solid var(--line);display:flex;flex-direction:column}
+  .thead,.trow{display:grid;gap:16px;align-items:center;padding:14px 22px}
+  .thead{border-bottom:1px solid var(--line)}
+  .trow{border-bottom:1px solid #1c1c1c;cursor:pointer;padding:20px 22px}
+  .trow:hover{background:var(--s2)}
+  .g-env{grid-template-columns:minmax(0,1.3fr) minmax(0,.8fr) minmax(0,1.3fr) minmax(0,1.2fr) minmax(0,.8fr) 140px}
+  .g-itm{grid-template-columns:minmax(0,2.6fr) minmax(0,.8fr) minmax(0,1.3fr) minmax(0,.9fr) 28px}
+  .empty{padding:40px;text-align:center;color:var(--muted)}
+  .bar{height:4px;background:#222} .bar > i{display:block;height:100%;background:var(--y)}
+  .flag{font:600 10px/1.3 var(--fh);letter-spacing:.08em;text-transform:uppercase;color:var(--badtxt);border:1px solid #5c2323;padding:3px 7px;white-space:nowrap}
+  .chip{font:600 11px var(--fh);letter-spacing:.08em;border:1px solid var(--line2);padding:2px 7px;color:#bdbdbd;white-space:nowrap}
+  .chip.y{border-color:#5a4210;color:var(--y)}
+  .st{font:500 13px var(--fh);letter-spacing:.1em;text-transform:uppercase;white-space:nowrap}
+  .cta{display:flex;align-items:center;gap:8px;height:38px;padding:0 14px;border:1px solid var(--y);font:600 13px var(--fh);letter-spacing:.1em;text-transform:uppercase;justify-self:end}
+  .thumb{flex:none;width:72px;height:72px;border:1px solid var(--line2);background:#fff center/contain no-repeat}
+  .thumb.ph{background:repeating-linear-gradient(135deg,#111 0 8px,#161616 8px 16px);display:flex;align-items:center;justify-content:center;font:9px var(--mono);color:var(--dim)}
+
+  .notice{display:flex;gap:14px;align-items:flex-start;border:1px solid var(--line);padding:14px 18px;font-size:14px;color:#cfcfcf}
+  .notice svg{flex:none}
+
+  /* Tela 03 */
+  .pcard{position:relative;border:1px solid var(--line2);padding:22px;display:flex;gap:22px;align-items:center;flex-wrap:wrap}
+  .pcard .reg{position:absolute;color:var(--y);font:300 14px/1 monospace}
+  .pfoto{flex:none;width:132px;height:132px;border-radius:50%;border:1px solid var(--y);background:#fff center/72% no-repeat}
+  .pfoto.ph{background:repeating-linear-gradient(135deg,#111 0 10px,#161616 10px 20px);display:flex;align-items:center;justify-content:center;font:10px var(--mono);color:var(--dim);text-align:center}
+  .pinfo{flex:1 1 260px;display:flex;flex-direction:column;gap:10px;min-width:0}
+  .pinfo h1{margin:0;font:600 26px/1.1 var(--fh);text-transform:uppercase;text-wrap:pretty}
+  .codes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line)}
+  .codes > div{background:#000;padding:9px 12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+  .codes small{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
+  .codes span{font:14px var(--mono);overflow-wrap:anywhere}
+  .instr{margin:0;padding-left:18px;color:#cfcfcf;font-size:13px}
+
+  .slots{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:12px;align-items:start;justify-items:center}
+  .slot{display:flex;flex-direction:column;align-items:center;gap:12px;width:100%}
+  .circle{width:190px;height:190px;max-width:40vw;max-height:40vw;border-radius:50%;border:2px solid var(--y);background:var(--s1);color:#fff;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:0}
+  .circle:hover{background:var(--s3)} .circle:active{background:var(--s4)}
+  .circle:disabled{cursor:default;border-style:dashed;border-color:#444;opacity:.7}
+  .circle b{font:600 18px/1 var(--fh);letter-spacing:.1em;text-transform:uppercase}
+  .circle small{font-size:12px;color:var(--muted);text-align:center;padding:0 14px}
+  .read{display:flex;flex-direction:column;align-items:center;gap:3px;min-height:40px;text-align:center}
+  .read small{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+  .read span{font:14px var(--mono);overflow-wrap:anywhere}
+  .compare{display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:70px}
+
+  .result{border:1px solid var(--line2);padding:18px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .result .dot{flex:none;width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:700 22px var(--fh)}
+  .result .txt{flex:1 1 220px;display:flex;flex-direction:column;gap:4px}
+  .result .t{font:600 22px/1.1 var(--fh);text-transform:uppercase;letter-spacing:.04em}
+  .result .d{font-size:14px;color:#cfcfcf}
+  .counter{display:flex;justify-content:space-between;align-items:center;gap:12px;border-top:1px solid var(--line);padding-top:16px;flex-wrap:wrap}
+  .counter strong{color:#fff;font:600 20px var(--fh)}
+  .toggles{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+  .toggles label{display:flex;gap:8px;align-items:center;cursor:pointer}
+  .toggles input{accent-color:var(--y);width:16px;height:16px}
+
+  /* Modais */
+  .modal{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center;padding:16px}
+  .mbox{width:100%;max-width:460px;max-height:calc(100vh - 32px);overflow:auto;border:1px solid var(--line2);background:var(--s1);display:flex;flex-direction:column}
+  .mbox.wide{max-width:620px}
+  .mhead{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--line);font:600 16px var(--fh);letter-spacing:.12em;text-transform:uppercase}
+  .mhead button{background:transparent;border:0;color:var(--muted);cursor:pointer;font-size:24px;line-height:1}
+  .mbody{padding:18px;display:flex;flex-direction:column;gap:12px}
+  .field{display:flex;flex-direction:column;gap:5px}
+  .field input,.minput{height:44px;background:#000;border:1px solid var(--line2);color:#fff;padding:0 12px;font:15px var(--fb);outline:0;width:100%}
+  .minput{font-family:var(--mono)}
+  .field input:focus,.minput:focus{border-color:var(--y)}
+  .viewer{position:relative;background:repeating-linear-gradient(0deg,#0d0d0d 0 3px,#111 3px 6px);min-height:240px}
+  #cam{width:100%}
+  #cam video{width:100% !important;display:block}
+  .viewer .hint{position:absolute;bottom:10px;left:0;right:0;text-align:center;font-size:13px;color:#cfcfcf;pointer-events:none;text-shadow:0 1px 3px #000}
+  .viewer .frame{position:absolute;left:12%;right:12%;top:30%;bottom:30%;pointer-events:none}
+  .viewer .frame i{position:absolute;width:26px;height:26px;border-color:var(--y);border-style:solid}
+  .viewer .scanline{position:absolute;left:6%;right:6%;height:2px;background:var(--y);box-shadow:0 0 12px var(--y);animation:kxScan 2.2s ease-in-out infinite}
+  @keyframes kxScan{0%{top:8%}50%{top:88%}100%{top:8%}}
+  .warn{border:1px solid #5a4210;color:var(--y);padding:10px 12px;font-size:13px}
+  .err{border:1px solid #5c2323;color:var(--badtxt);padding:10px 12px;font-size:13px}
+  .choice{display:flex;flex-direction:column;gap:8px}
+  .choice button{text-align:left;background:#000;border:1px solid var(--line2);color:#fff;padding:12px;cursor:pointer;font:14px var(--fb)}
+  .choice button:hover{border-color:var(--y)}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:30;background:var(--s4);border:1px solid var(--line2);padding:12px 18px;font-size:14px;max-width:calc(100vw - 32px)}
+  .log{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
+  .log b{font-weight:600}
+
+  @media (max-width:820px){
+    header{padding:10px 16px}
+    main{padding:22px 16px 64px;gap:20px}
+    .h1{font-size:34px}
+    .thead{display:none}
+    .trow{grid-template-columns:1fr 1fr;gap:12px;padding:16px}
+    .trow > .full{grid-column:1 / -1}
+    .trow .cta{justify-self:start}
+    .g-itm > svg{display:none}
+    .compare{margin-top:60px}
+    .compare svg{width:28px;height:28px}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand" onclick="go('#/')">
+    <svg viewBox="450 341 803 484" xmlns="http://www.w3.org/2000/svg" aria-label="Kaixeiro"><g transform="matrix(1,0,0,1,715,366)"><path fill="#f3aa07" d="M 4.882812 46.882812 L 77.164062 21.222656 C 78.875 20.578125 80.585938 20.792969 82.082031 21.433594 C 84.4375 22.503906 210.183594 66.988281 210.183594 66.988281 C 213.390625 68.054688 215.527344 71.050781 215.527344 74.472656 L 215.527344 104.410156 C 215.527344 107.191406 213.816406 109.542969 211.253906 110.398438 L 194.570312 116.386719 C 190.292969 117.882812 186.015625 114.890625 186.015625 110.398438 L 186.015625 85.378906 C 186.015625 81.957031 183.878906 78.960938 180.671875 77.894531 L 67.113281 38.542969 L 26.054688 53.085938 L 137.472656 92.222656 C 139.824219 93.078125 141.75 95.429688 141.75 98.210938 L 141.75 228.234375 L 257.230469 187.386719 L 257.230469 57.363281 L 133.195312 13.523438 C 129.773438 12.238281 128.0625 8.605469 129.34375 5.394531 C 130.628906 1.972656 134.265625 0.265625 137.472656 1.546875 L 265.785156 46.882812 C 268.351562 47.738281 270.0625 50.304688 270.0625 52.871094 L 270.0625 191.878906 C 270.0625 194.65625 268.351562 197.011719 265.785156 197.867188 L 137.472656 243.203125 C 136.832031 243.417969 135.976562 243.632812 135.332031 243.632812 C 134.90625 243.632812 134.691406 243.632812 134.265625 243.632812 C 134.050781 243.632812 133.621094 243.417969 133.195312 243.417969 L 4.882812 198.078125 C 2.316406 197.222656 0.605469 194.65625 0.605469 192.09375 L 0.605469 53.085938 C 0.605469 50.09375 2.316406 47.738281 4.882812 46.882812 Z"/></g><g transform="matrix(1,0,0,1,475,611)" fill="#ffffff"><g transform="translate(1.939476,148.827631)"><path d="M 7.796875 0 L 7.796875 -113.84375 L 36.46875 -113.84375 L 36.46875 -67.671875 L 76.109375 -113.84375 L 109.546875 -113.84375 L 66.234375 -63.6875 L 111.140625 0 L 77.703125 0 L 47.921875 -43.140625 L 36.46875 -30.09375 L 36.46875 0 Z"/></g><g transform="translate(112.908232,148.827631)"><path d="M -0.15625 0 L 41.078125 -113.84375 L 69.734375 -113.84375 L 110.8125 0 L 82.15625 0 L 74.828125 -23.71875 L 35.828125 -23.71875 L 28.5 0 Z M 42.359375 -45.53125 L 68.46875 -45.53125 L 55.5625 -87.578125 L 55.25 -87.578125 Z"/></g><g transform="translate(223.876988,148.827631)"><path d="M 7.96875 0 L 7.96875 -113.84375 L 36.625 -113.84375 L 36.625 0 Z"/></g><g transform="translate(268.296319,148.827631)"><path d="M 0.484375 0 L 38.21875 -58.109375 L 3.65625 -113.84375 L 33.90625 -113.84375 L 54.765625 -79.125 L 55.09375 -79.125 L 76.109375 -113.84375 L 106.359375 -113.84375 L 71.8125 -58.4375 L 109.546875 0 L 77.703125 0 L 55.09375 -36.9375 L 54.765625 -36.9375 L 32.328125 0 Z"/></g><g transform="translate(378.309807,148.827631)"><path d="M 7.796875 0 L 7.796875 -113.84375 L 94.09375 -113.84375 L 94.09375 -90.4375 L 36.46875 -90.4375 L 36.46875 -70.21875 L 86.140625 -70.21875 L 86.140625 -46.8125 L 36.46875 -46.8125 L 36.46875 -23.40625 L 95.046875 -23.40625 L 95.046875 0 Z"/></g><g transform="translate(478.29312,148.827631)"><path d="M 7.96875 0 L 7.96875 -113.84375 L 36.625 -113.84375 L 36.625 0 Z"/></g><g transform="translate(522.712452,148.827631)"><path d="M 7.796875 0 L 7.796875 -113.84375 L 61.453125 -113.84375 C 74.085938 -113.84375 84.015625 -111.003906 91.234375 -105.328125 C 98.453125 -99.648438 102.0625 -91.445312 102.0625 -80.71875 C 102.0625 -73.1875 99.988281 -67.054688 95.84375 -62.328125 C 91.707031 -57.609375 86.082031 -54.453125 78.96875 -52.859375 L 78.96875 -52.546875 C 83.75 -51.691406 87.519531 -49.910156 90.28125 -47.203125 C 93.039062 -44.492188 95.132812 -41.28125 96.5625 -37.5625 C 98 -33.851562 98.984375 -29.984375 99.515625 -25.953125 C 100.046875 -21.921875 100.414062 -18.097656 100.625 -14.484375 C 100.832031 -10.878906 101.125 -7.90625 101.5 -5.5625 C 101.875 -3.226562 102.59375 -1.90625 103.65625 -1.59375 L 103.65625 0 L 73.875 0 C 72.914062 -0.851562 72.332031 -2.363281 72.125 -4.53125 C 71.914062 -6.707031 71.785156 -9.304688 71.734375 -12.328125 C 71.679688 -15.359375 71.492188 -18.46875 71.171875 -21.65625 C 70.847656 -24.84375 70.128906 -27.785156 69.015625 -30.484375 C 67.898438 -33.191406 66.175781 -35.394531 63.84375 -37.09375 C 61.507812 -38.789062 58.328125 -39.640625 54.296875 -39.640625 L 36.46875 -39.640625 L 36.46875 0 Z M 36.46875 -63.046875 L 55.890625 -63.046875 C 61.617188 -63.046875 65.96875 -64.132812 68.9375 -66.3125 C 71.914062 -68.488281 73.40625 -71.96875 73.40625 -76.75 C 73.40625 -81.519531 71.914062 -84.992188 68.9375 -87.171875 C 65.96875 -89.347656 61.617188 -90.4375 55.890625 -90.4375 L 36.46875 -90.4375 Z"/></g><g transform="translate(629.541784,148.827631)"><path d="M 59.546875 2.546875 C 47.554688 2.546875 37.335938 -0.0234375 28.890625 -5.171875 C 20.453125 -10.316406 14.054688 -17.375 9.703125 -26.34375 C 5.359375 -35.320312 3.1875 -45.539062 3.1875 -57 C 3.1875 -68.46875 5.359375 -78.65625 9.703125 -87.5625 C 14.054688 -96.476562 20.453125 -103.507812 28.890625 -108.65625 C 37.335938 -113.8125 47.554688 -116.390625 59.546875 -116.390625 C 71.546875 -116.390625 81.738281 -113.8125 90.125 -108.65625 C 98.507812 -103.507812 104.898438 -96.476562 109.296875 -87.5625 C 113.703125 -78.65625 115.90625 -68.46875 115.90625 -57 C 115.90625 -45.539062 113.703125 -35.320312 109.296875 -26.34375 C 104.898438 -17.375 98.507812 -10.316406 90.125 -5.171875 C 81.738281 -0.0234375 71.546875 2.546875 59.546875 2.546875 Z M 59.546875 -20.859375 C 66.441406 -20.859375 71.90625 -22.472656 75.9375 -25.703125 C 79.976562 -28.941406 82.875 -33.320312 84.625 -38.84375 C 86.375 -44.363281 87.25 -50.414062 87.25 -57 C 87.25 -63.582031 86.375 -69.601562 84.625 -75.0625 C 82.875 -80.53125 79.976562 -84.882812 75.9375 -88.125 C 71.90625 -91.363281 66.441406 -92.984375 59.546875 -92.984375 C 52.648438 -92.984375 47.15625 -91.363281 43.0625 -88.125 C 38.976562 -84.882812 36.085938 -80.53125 34.390625 -75.0625 C 32.691406 -69.601562 31.84375 -63.582031 31.84375 -57 C 31.84375 -50.414062 32.691406 -44.363281 34.390625 -38.84375 C 36.085938 -33.320312 38.976562 -28.941406 43.0625 -25.703125 C 47.15625 -22.472656 52.648438 -20.859375 59.546875 -20.859375 Z"/></g></g></svg>
+    <span>Scanner Full</span>
+  </div>
+  <nav class="crumb" id="crumb"></nav>
+  <a class="back-app" href="index.html">← Bancada</a>
+</header>
+
+<div id="view"></div>
+
+<!-- Scanner (câmera + digitação / leitor USB) -->
+<div class="modal hidden" id="scanModal">
+  <div class="mbox">
+    <div class="mhead"><span id="scanTitle">Escanear</span><button onclick="closeScanner()" aria-label="Fechar">×</button></div>
+    <div class="viewer">
+      <div id="cam"></div>
+      <div class="frame" id="camFrame">
+        <i style="top:0;left:0;border-width:3px 0 0 3px"></i><i style="top:0;right:0;border-width:3px 3px 0 0"></i>
+        <i style="bottom:0;left:0;border-width:0 0 3px 3px"></i><i style="bottom:0;right:0;border-width:0 3px 3px 0"></i>
+        <span class="scanline"></span>
+      </div>
+      <div class="hint" id="scanHint"></div>
+    </div>
+    <div class="mbody">
+      <div id="camErr" class="err hidden"></div>
+      <form style="display:flex;gap:8px" onsubmit="event.preventDefault();submitManual()">
+        <input class="minput" id="manual" placeholder="Ou digite / use o leitor USB" autocomplete="off" autocapitalize="characters">
+        <button class="btn" type="submit">Ler</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Importar PDF/CSV -->
+<div class="modal hidden" id="impModal">
+  <div class="mbox wide">
+    <div class="mhead"><span>Importar envio</span><button onclick="closeImport()" aria-label="Fechar">×</button></div>
+    <div class="mbody" id="impBody"></div>
+  </div>
+</div>
+
+<!-- Escolha (EAN repetido em duas etiquetas etc.) -->
+<div class="modal hidden" id="choiceModal">
+  <div class="mbox">
+    <div class="mhead"><span id="choiceTitle">Qual produto?</span><button onclick="hide('choiceModal')" aria-label="Fechar">×</button></div>
+    <div class="mbody"><div class="choice" id="choiceList"></div></div>
+  </div>
+</div>
+
+<div class="toast hidden" id="toast"></div>
+
+<script>
+const API = "/api/full";
+const Y = "#F3AA07";
+const ICON = {
+  search:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9a9a9a" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>',
+  chev:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m9 18 6-6-6-6"/></svg>',
+  back:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m15 18-6-6 6-6"/></svg>',
+  barcode:'<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 8v8M10 8v8M13 8v8M17 8v8"/></svg>',
+  tag:'<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12.6 2.6A2 2 0 0 0 11.2 2H4a2 2 0 0 0-2 2v7.2a2 2 0 0 0 .6 1.4l8.7 8.7a2.4 2.4 0 0 0 3.4 0l6.6-6.6a2.4 2.4 0 0 0 0-3.4z"/><path d="M7.5 7.5h.01"/></svg>',
+  swap:'<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#F3AA07" stroke-width="1.5"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg>',
+  info:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F3AA07" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>',
+};
+
+// ---------- utilidades ----------
+const $ = (id) => document.getElementById(id);
+const show = (id) => $(id).classList.remove("hidden");
+const hide = (id) => $(id).classList.add("hidden");
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+const fmt = (n) => Number(n || 0).toLocaleString("pt-BR");
+const pct = (a, b) => (b ? Math.round((a / b) * 100) : 0);
+const go = (h) => { if (location.hash === h) route(); else location.hash = h; };
+function toast(msg, ms = 2600) { const t = $("toast"); t.textContent = msg; show("toast"); clearTimeout(toast._t); toast._t = setTimeout(() => hide("toast"), ms); }
+function pref(k, def) { try { const v = localStorage.getItem("kxfull." + k); return v == null ? def : v === "1"; } catch { return def; } }
+function setPref(k, v) { try { localStorage.setItem("kxfull." + k, v ? "1" : "0"); } catch {} }
+
+async function api(body) {
+  const r = await fetch(API, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : undefined);
+  const d = await r.json().catch(() => ({ ok: false, error: "Resposta inválida do servidor (" + r.status + ")" }));
+  if (!d.ok) throw new Error(d.error || "Erro " + r.status);
+  return d;
+}
+async function apiGet(qs) {
+  const r = await fetch(API + (qs || ""));
+  const d = await r.json().catch(() => ({ ok: false, error: "Resposta inválida do servidor (" + r.status + ")" }));
+  if (!d.ok) throw new Error(d.error || "Erro " + r.status);
+  return d;
+}
+
+// Bipe curto: agudo = bateu, grave = não bateu (dá pra conferir sem olhar a tela).
+let actx;
+function beep(ok) {
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.frequency.value = ok ? 1250 : 220; o.type = ok ? "sine" : "square";
+    g.gain.value = 0.08; o.connect(g); g.connect(actx.destination);
+    o.start(); o.stop(actx.currentTime + (ok ? 0.12 : 0.35));
+  } catch {}
+  if (navigator.vibrate) navigator.vibrate(ok ? 60 : [120, 60, 120]);
+}
+
+// ---------- regra de conferência ----------
+// Etiqueta do Full: o código de barras traz o Código ML (inventory_id: 4 letras + 5 dígitos).
+// Produto: aceita o EAN do PDF, os GTINs do anúncio no ML ou o SKU.
+const norm = (s) => String(s || "").trim().toUpperCase().replace(/\s+/g, "");
+const digits = (s) => s.replace(/^0+/, "");
+function labelCode(raw) { const c = norm(raw); const m = c.match(/[A-Z]{4}\d{5}/); return m ? m[0] : c; }
+function productCodes(it) {
+  return [it.ean, ...(it.gtins || [])].filter(Boolean).map((x) => digits(norm(x)));
+}
+function productMatches(it, raw) {
+  const c = norm(raw);
+  if (!c) return false;
+  if (/^\d+$/.test(c)) return productCodes(it).includes(digits(c));
+  return !!it.sku && norm(it.sku) === c;
+}
+const precisaEtiqueta = (it) => !/universal/i.test(it.identificacao || "");
+const findByLabel = (raw) => S.itens.filter((i) => i.inv === labelCode(raw));
+const findByProduct = (raw) => S.itens.filter((i) => productMatches(i, raw));
+
+// ---------- estado ----------
+const S = {
+  envios: [], filtro: "prep", busca: "",
+  envio: null, itens: [], leituras: [], itemFiltro: "todos",
+  inv: null, prod: null, etq: null, manualProd: false, slot: null,
+};
+
+// ---------- roteamento ----------
+window.addEventListener("hashchange", route);
+async function route() {
+  closeScanner();
+  const parts = location.hash.replace(/^#\/?/, "").split("/").filter(Boolean).map(decodeURIComponent);
+  try {
+    if (parts[0] === "envio" && parts[1]) {
+      if (!S.envio || S.envio.frete !== parts[1] || !parts[2]) await loadEnvio(parts[1]);
+      if (parts[2]) return renderProduto(parts[2]);
+      return renderEnvio();
+    }
+    await loadEnvios();
+    renderLista();
+  } catch (e) {
+    $("view").innerHTML = `<main><div class="err">${esc(e.message)}</div><a href="#/">← Voltar aos envios</a></main>`;
+  }
+}
+function crumb(list) {
+  $("crumb").innerHTML = list.map((c, k) => (k ? '<span class="sep">/</span>' : "") +
+    (c.href ? `<a href="${c.href}">${esc(c.t)}</a>` : `<span class="cur">${esc(c.t)}</span>`)).join("");
+}
+
+// ---------- Tela 01: envios ----------
+async function loadEnvios() { S.envios = (await apiGet()).envios; }
+
+function renderLista() {
+  crumb([{ t: "Envios" }]);
+  const prep = S.envios.filter((e) => e.status !== "despachado");
+  const list = S.envios.filter((e) =>
+    (S.filtro === "todos" || (S.filtro === "prep" ? e.status !== "despachado" : e.status === "despachado")) &&
+    e.frete.includes(S.busca.replace("#", "").trim()));
+  $("view").innerHTML = `
+  <main>
+    <div class="head">
+      <div>
+        <span class="eyebrow">Tela 01</span>
+        <h1 class="h1">Envios Full</h1>
+        <p class="sub">Escolha um envio para montar e conferir as unidades.</p>
+      </div>
+      <button class="btn" onclick="openImport()">Importar PDF do frete</button>
+    </div>
+    <div class="kpis">
+      <div><b>${prep.length}</b><span>Envios em preparação</span></div>
+      <div><b style="color:${Y}">${fmt(prep.reduce((a, e) => a + e.declaradas - e.conferidas, 0))}</b><span>Unidades a conferir</span></div>
+      <div><b style="color:var(--badtxt)">${S.envios.filter((e) => e.divergencias && e.status !== "despachado").length}</b><span>Com leitura divergente</span></div>
+    </div>
+    <div class="tools">
+      <div class="search">${ICON.search}<input id="busca" value="${esc(S.busca)}" placeholder="Buscar por n.º do frete" oninput="S.busca=this.value;renderListaRows()"></div>
+      <div class="seg">${[["todos","Todos"],["prep","Em preparação"],["desp","Despachados"]].map(([k,l]) =>
+        `<button class="${S.filtro===k?"on":""}" onclick="S.filtro='${k}';renderLista()">${l}</button>`).join("")}</div>
+    </div>
+    <div class="table">
+      <div class="thead g-env lbl"><span>Envio</span><span>Declaradas / Conferidas</span><span>Coleta</span><span>Conferência</span><span>Status</span><span></span></div>
+      <div id="rows"></div>
+    </div>
+  </main>`;
+  renderListaRows(list);
+}
+function renderListaRows(list) {
+  list = list || S.envios.filter((e) =>
+    (S.filtro === "todos" || (S.filtro === "prep" ? e.status !== "despachado" : e.status === "despachado")) &&
+    e.frete.includes(S.busca.replace("#", "").trim()));
+  $("rows").innerHTML = list.length ? list.map((e) => {
+    const p = pct(e.conferidas, e.declaradas), desp = e.status === "despachado", done = p === 100;
+    const st = desp ? ["Despachado", "var(--muted)"] : done ? ["Conferido", "var(--ok)"] : ["Em preparação", Y];
+    return `<div class="trow g-env" onclick="go('#/envio/${encodeURIComponent(e.frete)}')">
+      <div class="full" style="display:flex;flex-direction:column;gap:6px;align-items:flex-start">
+        <span style="font:600 24px/1 var(--fh)">#${esc(e.frete)}</span>
+        <span style="font-size:13px;color:var(--muted)">${e.produtos} produtos · importado ${new Date(e.importado_em).toLocaleDateString("pt-BR")}</span>
+        ${e.divergencias && !desp ? '<span class="flag">Leitura divergente</span>' : ""}
+      </div>
+      <span style="font:500 20px var(--fh)">${fmt(e.declaradas)} <span style="color:var(--dim)">/ ${fmt(e.conferidas)}</span></span>
+      <div style="display:flex;flex-direction:column;gap:3px"><span>${esc(e.data_coleta || "—")}</span><span style="font-size:12px;color:var(--muted)">${esc(e.centro || "Centro não informado")}</span></div>
+      <div class="full" style="display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">${fmt(e.conferidas)} de ${fmt(e.declaradas)} un.</span><span style="color:${done?"var(--ok)":Y};font-weight:600">${p}%</span></div>
+        <div class="bar"><i style="width:${p}%;background:${done?"var(--ok)":Y}"></i></div>
+      </div>
+      <span class="st" style="color:${st[1]}">${st[0]}</span>
+      <span class="cta" style="background:${desp?"transparent":Y};color:${desp?Y:"#000"}">${desp ? "Detalhes" : "Montar"} ${ICON.chev}</span>
+    </div>`;
+  }).join("") : `<div class="empty">${S.envios.length ? "Nenhum envio encontrado." : "Nenhum envio ainda. Importe o PDF \"Lista de produtos e instruções de preparação\" do Seller Center."}</div>`;
+}
+
+// ---------- Importar ----------
+let IMP = null;
+function openImport(reFrete) {
+  IMP = { reFrete: reFrete || null };
+  $("impBody").innerHTML = `
+    <p style="margin:0;color:#cfcfcf;font-size:14px">No Seller Center, abra o envio e baixe a <b>Lista de produtos e instruções de preparação</b> (Inbound-&lt;frete&gt;-preparation-instructions.pdf). ${reFrete ? "Use a versão <b>final</b>: o que já foi conferido é mantido." : ""}</p>
+    <input type="file" id="impFile" accept=".pdf,.csv,application/pdf,text/csv" class="minput" style="padding:10px;height:auto">
+    <p style="margin:0;color:var(--dim);font-size:12px">Também aceita o CSV da lista do galpão (lista-galpao-*.csv) para começar a separar antes do frete final.</p>
+    <div id="impPrev"></div>`;
+  $("impFile").onchange = (ev) => readImport(ev.target.files[0]);
+  show("impModal");
+}
+function closeImport() { hide("impModal"); IMP = null; }
+
+function parseCsv(text) {
+  const rows = text.replace(/^﻿/, "").split(/\r?\n/).filter((l) => l.trim());
+  const sep = rows[0].includes(";") ? ";" : ",";
+  const split = (l) => { const out = []; let cur = "", q = false; for (const ch of l) { if (ch === '"') q = !q; else if (ch === sep && !q) { out.push(cur); cur = ""; } else cur += ch; } out.push(cur); return out.map((s) => s.trim()); };
+  const head = split(rows[0]).map((h) => h.toLowerCase());
+  const col = (...names) => head.findIndex((h) => names.some((n) => h.includes(n)));
+  const ci = col("etiqueta", "código ml", "codigo ml"), cs = col("sku"), cp = col("produto", "título", "titulo"), cq = col("quantidade", "unidades"), ce = col("ean", "universal");
+  if (ci < 0 || cq < 0) throw new Error("CSV sem as colunas Etiqueta/Código ML e Quantidade.");
+  const itens = rows.slice(1).map(split).map((r) => ({
+    inv: (r[ci] || "").toUpperCase(), sku: cs >= 0 ? r[cs] : null, titulo: cp >= 0 ? r[cp] : null,
+    ean: ce >= 0 && /^\d{8,14}$/.test(r[ce] || "") ? r[ce] : null,
+    unidades: parseInt(r[cq], 10) || 0, identificacao: "Etiquetagem obrigatória", tags: [], instrucoes: [],
+  })).filter((i) => /^[A-Z]{4}\d{5}$/.test(i.inv) && i.unidades > 0);
+  return { frete: null, itens, avisos: [], totalProdutos: null, totalUnidades: null };
+}
+
+async function readImport(file) {
+  const prev = $("impPrev");
+  if (!file) return;
+  prev.innerHTML = '<p style="color:var(--muted)">Lendo arquivo…</p>';
+  try {
+    let r;
+    if (/\.csv$/i.test(file.name) || file.type === "text/csv") {
+      r = parseCsv(await file.text());
+      r.origem = "csv";
+      const d = (file.name.match(/\d{4}-\d{2}-\d{2}/) || [new Date().toISOString().slice(0, 10)])[0];
+      r.frete = IMP.reFrete || "PLANO-" + d;
+    } else {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+      r = await KxFullPDF.readFile(file);
+      r.origem = "pdf";
+    }
+    if (!r.itens.length) throw new Error("Não achei nenhuma linha de produto nesse arquivo.");
+    if (IMP.reFrete && r.frete && r.frete !== IMP.reFrete && r.origem === "pdf")
+      r.avisos.unshift(`Esse PDF é do frete #${r.frete}, não do #${IMP.reFrete}. Ele vai entrar como um envio separado.`);
+    IMP.data = r;
+    const ex = S.envios.find((e) => e.frete === r.frete) || (S.envio && S.envio.frete === r.frete ? S.envio : null);
+    const unid = r.itens.reduce((a, i) => a + i.unidades, 0);
+    prev.innerHTML = `
+      <div class="codes" style="grid-template-columns:repeat(3,minmax(0,1fr))">
+        <div><small>Frete</small><span>${esc(r.frete || "—")}</span></div>
+        <div><small>Produtos</small><span>${r.itens.length}</span></div>
+        <div><small>Unidades</small><span>${fmt(unid)}</span></div>
+      </div>
+      ${r.avisos.map((a) => `<div class="warn">${esc(a)}</div>`).join("")}
+      ${ex ? '<div class="warn">Esse frete já existe: as linhas serão atualizadas e o que já foi conferido é mantido.</div>' : ""}
+      <div class="field"><span class="lbl">N.º do frete</span><input id="impFrete" value="${esc(r.frete || "")}"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="field"><span class="lbl">Data da coleta</span><input id="impData" placeholder="ex.: 15/10 · 08:00" value="${esc(ex?.data_coleta || "")}"></div>
+        <div class="field"><span class="lbl">Centro logístico</span><input id="impCentro" placeholder="ex.: BRSP06" value="${esc(ex?.centro || "")}"></div>
+      </div>
+      <button class="btn" id="impGo" onclick="confirmImport()">Importar ${r.itens.length} produtos</button>`;
+  } catch (e) {
+    prev.innerHTML = `<div class="err">${esc(e.message)}</div>`;
+  }
+}
+
+async function confirmImport() {
+  const r = IMP.data, btn = $("impGo");
+  const frete = $("impFrete").value.trim().replace(/^#/, "");
+  if (!frete) return toast("Informe o número do frete.");
+  btn.disabled = true; btn.textContent = "Gravando…";
+  try {
+    const res = await api({ acao: "importar", frete, origem: r.origem, centro: $("impCentro").value, data_coleta: $("impData").value,
+      total_produtos: r.totalProdutos, total_unidades: r.totalUnidades, itens: r.itens });
+    const perdidos = res.removidos.filter((x) => x.conferidas > 0);
+    if (perdidos.length) alert("Atenção: saíram do PDF novo linhas que já tinham unidades conferidas:\n" + perdidos.map((x) => `${x.inv}: ${x.conferidas} un.`).join("\n") + "\nSepare essas unidades.");
+    btn.textContent = "Buscando fotos no ML…";
+    let enr = null;
+    try { enr = await api({ acao: "enriquecer", frete }); } catch (e) { toast("Envio gravado, mas a API do ML falhou: " + e.message, 5000); }
+    closeImport();
+    S.envio = null;
+    if (enr && enr.sem_anuncio.length) toast(`${enr.sem_anuncio.length} etiqueta(s) sem anúncio achado no ML: ${enr.sem_anuncio.join(", ")}`, 6000);
+    go("#/envio/" + encodeURIComponent(frete));
+  } catch (e) {
+    btn.disabled = false; btn.textContent = "Tentar de novo";
+    toast(e.message, 5000);
+  }
+}
+
+// ---------- Tela 02: produtos do envio ----------
+async function loadEnvio(frete) {
+  const d = await apiGet("?frete=" + encodeURIComponent(frete));
+  S.envio = d.envio; S.itens = d.itens; S.leituras = d.leituras;
+}
+function itemStatus(it) {
+  if (it.conferidas >= it.unidades) return ["Conferido", "var(--ok)"];
+  if (it.conferidas > 0) return ["Em conferência", Y];
+  return ["Pendente", "var(--muted)"];
+}
+function thumb(it, cls = "thumb") {
+  return it.foto ? `<div class="${cls}" style="background-image:url('${esc(it.foto)}')"></div>` : `<div class="${cls} ph">FOTO</div>`;
+}
+
+function renderEnvio() {
+  const e = S.envio, F = encodeURIComponent(e.frete);
+  crumb([{ t: "Envios", href: "#/" }, { t: "#" + e.frete }]);
+  const tot = S.itens.reduce((a, i) => a + i.unidades, 0), done = S.itens.reduce((a, i) => a + i.conferidas, 0);
+  const pend = S.itens.filter((i) => i.conferidas < i.unidades);
+  const semFoto = S.itens.filter((i) => !i.enriquecido_em).length;
+  const lista = S.itemFiltro === "pend" ? pend : S.itens;
+  const desp = e.status === "despachado";
+  $("view").innerHTML = `
+  <main>
+    <div class="head">
+      <div>
+        <a class="eyebrow" href="#/" style="display:flex;align-items:center;gap:6px">${ICON.back}Tela 02 · Voltar aos envios</a>
+        <h1 class="h1">Envio #${esc(e.frete)}</h1>
+        <p class="sub">${esc(e.centro || "Centro não informado")} · ${esc(e.data_coleta || "coleta sem data")} · <a href="javascript:editEnvio()">editar</a></p>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;min-width:240px">
+        <span style="font-size:13px;color:var(--muted)">${fmt(done)} de ${fmt(tot)} un. conferidas · ${pend.length} produto(s) pendente(s)</span>
+        <div class="bar" style="width:240px"><i style="width:${pct(done, tot)}%;background:${done === tot ? "var(--ok)" : Y}"></i></div>
+      </div>
+    </div>
+
+    <div class="tools">
+      <button class="btn" onclick="openScanner('achar')">${ICON.barcode.replace(/44/g, 20)} Escanear para achar o produto</button>
+      <div class="seg">${[["todos", "Todos · " + S.itens.length], ["pend", "Pendentes · " + pend.length]].map(([k, l]) =>
+        `<button class="${S.itemFiltro === k ? "on" : ""}" onclick="S.itemFiltro='${k}';renderEnvio()">${l}</button>`).join("")}</div>
+    </div>
+
+    <div class="notice">${ICON.info}<span>Enviar quantidade diferente da declarada gera custo por inconformidade. Nos produtos com <b style="color:${Y}">etiquetagem obrigatória</b>, leia o código do produto <b>antes</b> de colar a etiqueta do ML por cima.</span></div>
+
+    <div class="table">
+      <div class="thead g-itm lbl"><span>Produto · ${S.itens.length} itens</span><span>Declaradas</span><span>Conferidas</span><span>Status</span><span></span></div>
+      ${lista.length ? lista.map((it) => {
+        const [st, sc] = itemStatus(it), p = pct(it.conferidas, it.unidades);
+        return `<div class="trow g-itm" onclick="go('#/envio/${F}/${it.inv}')">
+          <div class="full" style="display:flex;gap:14px;align-items:center;min-width:0">
+            ${thumb(it)}
+            <div style="display:flex;flex-direction:column;gap:5px;min-width:0">
+              <span style="font-size:12px;color:var(--muted)">Código ML <span class="mono" style="color:#fff">${esc(it.inv)}</span> · SKU <span class="mono" style="color:#fff">${esc(it.sku || "—")}</span></span>
+              <span style="font-size:16px;font-weight:600;line-height:1.3">${esc(it.titulo)}</span>
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <span class="chip ${precisaEtiqueta(it) ? "y" : ""}">${precisaEtiqueta(it) ? "ETIQUETAGEM" : "CÓDIGO UNIVERSAL"}</span>
+                ${it.ean ? "" : '<span class="chip">SEM EAN</span>'}
+                ${(it.tags || []).map((t) => `<span class="chip">${esc(t)}</span>`).join("")}
+              </div>
+            </div>
+          </div>
+          <span style="font:500 22px var(--fh)">${fmt(it.unidades)} <span style="font-size:14px;color:var(--dim)">un.</span></span>
+          <div style="display:flex;flex-direction:column;gap:8px"><span style="font-size:13px;color:var(--muted)">${fmt(it.conferidas)} de ${fmt(it.unidades)} un.</span><div class="bar"><i style="width:${p}%;background:${p === 100 ? "var(--ok)" : Y}"></i></div></div>
+          <span class="st" style="color:${sc}">${st}</span>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${Y}" stroke-width="1.5"><path d="m9 18 6-6-6-6"/></svg>
+        </div>`;
+      }).join("") : '<div class="empty">Tudo conferido neste envio. ✓</div>'}
+    </div>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn quiet sm" onclick="openImport('${esc(e.frete)}')">Reimportar PDF final</button>
+      <button class="btn quiet sm" onclick="enrich(this)">${semFoto ? `Buscar fotos no ML (${semFoto} sem)` : "Atualizar fotos do ML"}</button>
+      <button class="btn ${desp ? "quiet" : "ghost"} sm" onclick="setStatus('${desp ? "preparacao" : "despachado"}')">${desp ? "Voltar para preparação" : "Marcar como despachado"}</button>
+      <button class="btn quiet sm" style="margin-left:auto" onclick="delEnvio()">Excluir envio</button>
+    </div>
+
+    ${S.leituras.length ? `<div class="log"><span class="lbl">Últimas leituras</span>${S.leituras.slice(0, 12).map((l) =>
+      `<span>${new Date(l.criado_em).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })} · <b style="color:${l.resultado === "ok" ? "var(--ok)" : l.resultado === "divergente" ? "var(--badtxt)" : "var(--muted)"}">${esc(l.resultado)}</b> · ${esc(l.inv || "—")} ${l.detalhe ? "· " + esc(l.detalhe) : ""}</span>`).join("")}</div>` : ""}
+  </main>`;
+}
+
+async function enrich(btn) {
+  btn.disabled = true; btn.textContent = "Buscando…";
+  try {
+    const r = await api({ acao: "enriquecer", frete: S.envio.frete });
+    toast(`${r.encontrados} produto(s) atualizados com a API do ML` + (r.sem_anuncio.length ? ` · sem anúncio: ${r.sem_anuncio.join(", ")}` : ""), 5000);
+    await loadEnvio(S.envio.frete); renderEnvio();
+  } catch (e) { toast(e.message, 5000); btn.disabled = false; btn.textContent = "Tentar de novo"; }
+}
+async function editEnvio() {
+  const data = prompt("Data da coleta:", S.envio.data_coleta || ""); if (data === null) return;
+  const centro = prompt("Centro logístico:", S.envio.centro || ""); if (centro === null) return;
+  await api({ acao: "editar", frete: S.envio.frete, data_coleta: data, centro });
+  await loadEnvio(S.envio.frete); renderEnvio();
+}
+async function setStatus(status) {
+  const falta = S.itens.reduce((a, i) => a + i.unidades - i.conferidas, 0);
+  if (status === "despachado" && falta && !confirm(`Ainda faltam ${falta} unidade(s) sem conferência. Marcar como despachado mesmo assim?`)) return;
+  await api({ acao: "editar", frete: S.envio.frete, status });
+  await loadEnvio(S.envio.frete); renderEnvio();
+}
+async function delEnvio() {
+  if (!confirm(`Excluir o envio #${S.envio.frete} do scanner? A contagem e o histórico de leituras dele se perdem. (Nada muda no Mercado Livre.)`)) return;
+  await api({ acao: "excluir", frete: S.envio.frete });
+  S.envio = null; go("#/");
+}
+
+// ---------- Tela 03: conferência do produto ----------
+function curItem() { return S.itens.find((i) => i.inv === S.inv); }
+
+function renderProduto(inv) {
+  if (S.inv !== inv) { S.inv = inv; S.prod = null; S.etq = null; S.manualProd = false; }
+  const it = curItem(), e = S.envio, F = encodeURIComponent(e.frete);
+  if (!it) { $("view").innerHTML = `<main class="narrow"><div class="err">Código ML ${esc(inv)} não está no envio #${esc(e.frete)}.</div><a href="#/envio/${F}">← Voltar ao envio</a></main>`; return; }
+  crumb([{ t: "Envios", href: "#/" }, { t: "#" + e.frete, href: "#/envio/" + F }, { t: it.sku || it.inv }]);
+  const needEtq = precisaEtiqueta(it);
+  const R = evaluate(it);
+  const ring = (filled, wrong) => !filled ? Y : wrong ? "var(--bad)" : R.state === "ok" ? "var(--ok)" : "#fff";
+  const full = it.conferidas >= it.unidades;
+  const prox = S.itens.find((i) => i.conferidas < i.unidades && i.inv !== it.inv);
+  $("view").innerHTML = `
+  <main class="narrow">
+    <a class="eyebrow" href="#/envio/${F}" style="display:flex;align-items:center;gap:6px">${ICON.back}Tela 03 · Voltar ao envio #${esc(e.frete)}</a>
+
+    <section class="pcard">
+      <span class="reg" style="top:-6px;left:-6px">+</span><span class="reg" style="top:-6px;right:-6px">+</span>
+      <span class="reg" style="bottom:-7px;left:-6px">+</span><span class="reg" style="bottom:-7px;right:-6px">+</span>
+      ${it.foto ? `<div class="pfoto" style="background-image:url('${esc(it.foto)}')"></div>` : '<div class="pfoto ph">FOTO DO<br>PRODUTO</div>'}
+      <div class="pinfo">
+        <span class="eyebrow" style="font-size:12px">Nome no anúncio</span>
+        <h1>${esc(it.titulo)}</h1>
+        <div class="codes">
+          <div><small>Código ML</small><span>${esc(it.inv)}</span></div>
+          <div><small>SKU</small><span>${esc(it.sku || "—")}</span></div>
+          <div><small>Código universal</small><span>${esc(it.ean || "N/A")}</span></div>
+          <div><small>Identificação</small><span style="font-family:var(--fb)">${esc(it.identificacao || "—")}</span></div>
+        </div>
+        ${(it.instrucoes || []).length ? `<ul class="instr">${it.instrucoes.map((s) => `<li>${esc(s)}</li>`).join("")}</ul>` : ""}
+        ${it.permalink ? `<a href="${esc(it.permalink)}" target="_blank" rel="noopener" style="font-size:13px">Ver anúncio ${esc(it.item_id || "")} ↗</a>` : ""}
+      </div>
+    </section>
+
+    <section class="slots">
+      <div class="slot">
+        <button class="circle" style="border-color:${ring(S.prod || S.manualProd, R.prodWrong)}" onclick="openScanner('prod')" ${full ? "disabled" : ""}>
+          <span style="color:${ring(S.prod || S.manualProd, R.prodWrong)};display:flex">${ICON.barcode}</span>
+          <b>Produto</b><small>EAN ou SKU</small>
+        </button>
+        <div class="read"><small>Lido</small><span style="color:${S.prod || S.manualProd ? "#fff" : "#444"}">${esc(S.manualProd ? "conferido no olho" : S.prod || "—")}</span></div>
+      </div>
+      <div class="compare">${ICON.swap}<span class="lbl" style="font-size:11px">Comparar</span></div>
+      <div class="slot">
+        <button class="circle" style="border-color:${needEtq ? ring(S.etq, R.etqWrong) : "#444"}" onclick="openScanner('etq')" ${!needEtq || full ? "disabled" : ""}>
+          <span style="color:${needEtq ? ring(S.etq, R.etqWrong) : "#555"};display:flex">${ICON.tag}</span>
+          <b>Etiqueta</b><small>${needEtq ? "Código ML colado" : "Não leva: o ML lê o EAN"}</small>
+        </button>
+        <div class="read"><small>Lido</small><span style="color:${S.etq ? "#fff" : "#444"}">${esc(needEtq ? S.etq || "—" : "dispensada")}</span></div>
+      </div>
+    </section>
+
+    <section class="result" style="border-color:${R.border};background:${R.bg}">
+      <span class="dot" style="background:${R.dot};color:${R.dotFg}">${R.glyph}</span>
+      <div class="txt"><span class="t" style="color:${R.titleColor}">${esc(R.title)}</span><span class="d">${R.text}</span></div>
+      ${R.state === "ok" ? `<button class="btn" id="btnConfirm" onclick="confirmUnit()">Próxima unidade</button>` : ""}
+      ${R.state === "bad" ? `<button class="btn white" onclick="resetReads()">Ler de novo</button>` : ""}
+      ${R.state === "full" && prox ? `<button class="btn" onclick="go('#/envio/${F}/${prox.inv}')">Próximo pendente</button>` : ""}
+      ${R.state === "full" && !prox ? `<button class="btn" onclick="go('#/envio/${F}')">Ver envio</button>` : ""}
+    </section>
+
+    <div class="counter">
+      <span style="white-space:nowrap;font-size:14px;color:var(--muted)">Conferidas <strong>${fmt(it.conferidas)}</strong> de ${fmt(it.unidades)}</span>
+      <div class="bar" style="flex:1 1 200px;max-width:320px"><i style="width:${pct(it.conferidas, it.unidades)}%;background:${full ? "var(--ok)" : Y}"></i></div>
+    </div>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      ${it.conferidas > 0 ? `<button class="btn quiet sm" onclick="undoUnit()">Desfazer 1 unidade</button>` : ""}
+      ${!full && !it.ean && !(it.gtins || []).length && !S.prod && !S.manualProd ? `<button class="btn quiet sm" onclick="manualProduct()">Produto sem código: conferi no olho</button>` : ""}
+    </div>
+
+    <div class="toggles">
+      <label><input type="checkbox" ${pref("auto", false) ? "checked" : ""} onchange="setPref('auto',this.checked)"> Somar sozinho quando bater</label>
+      <label><input type="checkbox" ${pref("reopen", true) ? "checked" : ""} onchange="setPref('reopen',this.checked)"> Reabrir a câmera depois de cada unidade</label>
+    </div>
+  </main>`;
+  if (S.openNext) { const n = S.openNext; S.openNext = null; if (R.state === "half") openScanner(n); }
+}
+
+function evaluate(it) {
+  const needEtq = precisaEtiqueta(it);
+  const pOk = S.manualProd || (S.prod && productMatches(it, S.prod));
+  const eOk = !needEtq || (S.etq && labelCode(S.etq) === it.inv);
+  const prodWrong = !!S.prod && !S.manualProd && !productMatches(it, S.prod);
+  const etqWrong = needEtq && !!S.etq && labelCode(S.etq) !== it.inv;
+  const base = { prodWrong, etqWrong };
+  if (it.conferidas >= it.unidades)
+    return { ...base, state: "full", border: "var(--ok)", bg: "var(--okbg)", dot: "var(--ok)", dotFg: "#000", glyph: "✓", titleColor: "var(--ok)", title: "Produto completo", text: `As ${fmt(it.unidades)} unidades declaradas já foram conferidas. Não coloque mais nenhuma na caixa.` };
+  if (prodWrong || etqWrong) {
+    const quem = [];
+    if (prodWrong) { const o = findByProduct(S.prod).filter((x) => x.inv !== it.inv); quem.push(o.length ? `O código do produto é de <b>${esc(o[0].titulo)}</b> (${esc(o[0].inv)}).` : "O código do produto não pertence a nenhum item deste envio."); }
+    if (etqWrong) { const o = findByLabel(S.etq).filter((x) => x.inv !== it.inv); quem.push(o.length ? `A etiqueta é de <b>${esc(o[0].titulo)}</b> (${esc(o[0].inv)}).` : `A etiqueta (${esc(labelCode(S.etq))}) não pertence a este envio.`); }
+    return { ...base, state: "bad", border: "var(--bad)", bg: "var(--badbg)", dot: "var(--bad)", dotFg: "#000", glyph: "!", titleColor: "var(--badtxt)", title: "Não confere", text: quem.join(" ") + " Separe a unidade e confira." };
+  }
+  if (pOk && eOk)
+    return { ...base, state: "ok", border: "var(--ok)", bg: "var(--okbg)", dot: "var(--ok)", dotFg: "#000", glyph: "✓", titleColor: "var(--ok)", title: "Mesmo produto", text: needEtq ? "Produto e etiqueta batem. Pode embalar essa unidade." : "Código universal confere (este produto não leva etiqueta). Pode embalar." };
+  if (S.prod || S.manualProd || S.etq)
+    return { ...base, state: "half", border: Y, bg: "transparent", dot: Y, dotFg: "#000", glyph: "1", titleColor: Y, title: "Falta uma leitura", text: S.etq ? "Etiqueta lida. Agora leia o código do produto." : "Produto lido. Cole a etiqueta do ML e leia a etiqueta." };
+  return { ...base, state: "idle", border: "var(--line2)", bg: "transparent", dot: "var(--s4)", dotFg: "var(--muted)", glyph: "?", titleColor: "#fff", title: "Aguardando leitura",
+    text: needEtq ? "Leia o código do produto, cole a etiqueta do ML e leia a etiqueta." : "Leia o código universal (EAN) do produto." };
+}
+
+let busy = false;
+async function onRead(slot, code) {
+  const it = curItem(); if (!it) return;
+  if (slot === "prod") { S.prod = norm(code); S.manualProd = false; } else S.etq = norm(code);
+  const R = evaluate(it);
+  if (R.state === "bad") {
+    beep(false);
+    api({ acao: "leitura", frete: S.envio.frete, inv: it.inv, codigo_produto: S.prod, codigo_etiqueta: S.etq, resultado: "divergente",
+      detalhe: (R.prodWrong ? "produto " + S.prod : "") + (R.prodWrong && R.etqWrong ? " · " : "") + (R.etqWrong ? "etiqueta " + labelCode(S.etq) : "") }).catch(() => {});
+    renderProduto(it.inv); return;
+  }
+  if (R.state === "ok") {
+    beep(true);
+    if (pref("auto", false)) return confirmUnit();
+    renderProduto(it.inv); return;
+  }
+  beep(true);
+  renderProduto(it.inv);
+  // Falta a outra leitura: abre o scanner direto nela.
+  const next = !S.prod && !S.manualProd ? "prod" : precisaEtiqueta(it) && !S.etq ? "etq" : null;
+  if (next) openScanner(next);
+}
+
+async function confirmUnit() {
+  const it = curItem(); if (!it || busy) return;
+  busy = true;
+  const btn = $("btnConfirm"); if (btn) { btn.disabled = true; btn.textContent = "Somando…"; }
+  try {
+    const r = await api({ acao: "conferir", frete: S.envio.frete, inv: it.inv, delta: 1, codigo_produto: S.manualProd ? "(visual)" : S.prod, codigo_etiqueta: S.etq, resultado: S.manualProd ? "manual" : "ok" });
+    it.conferidas = r.conferidas;
+    S.prod = null; S.etq = null; S.manualProd = false;
+    renderProduto(it.inv);
+    toast(`Unidade ${fmt(it.conferidas)} de ${fmt(it.unidades)} conferida`, 1400);
+    if (it.conferidas < it.unidades && pref("reopen", true)) openScanner("prod");
+    else if (it.conferidas >= it.unidades) beep(true);
+  } catch (e) { toast("Não somou: " + e.message, 5000); renderProduto(it.inv); }
+  busy = false;
+}
+async function undoUnit() {
+  const it = curItem(); if (!it || !confirm("Tirar 1 unidade da contagem deste produto?")) return;
+  try {
+    const r = await api({ acao: "conferir", frete: S.envio.frete, inv: it.inv, delta: -1, resultado: "desfeito" });
+    it.conferidas = r.conferidas; renderProduto(it.inv);
+  } catch (e) { toast(e.message, 5000); }
+}
+function resetReads() { S.prod = null; S.etq = null; S.manualProd = false; renderProduto(S.inv); }
+function manualProduct() {
+  if (!confirm("Este produto não tem EAN no PDF nem no anúncio. Confirma que conferiu pelo nome/foto que é este produto?")) return;
+  S.manualProd = true; renderProduto(S.inv);
+  if (precisaEtiqueta(curItem()) && !S.etq) openScanner("etq");
+}
+
+// "Achar o produto" na Tela 02: aceita etiqueta ou código do produto e já deixa a leitura preenchida.
+function onFind(code) {
+  const F = encodeURIComponent(S.envio.frete);
+  const byL = findByLabel(code), byP = findByProduct(code);
+  const open = (it, slot) => {
+    S.inv = it.inv; S.prod = slot === "prod" ? norm(code) : null; S.etq = slot === "etq" ? norm(code) : null; S.manualProd = false;
+    S.openNext = slot === "etq" ? "prod" : precisaEtiqueta(it) ? "etq" : null; // já abre a leitura que falta
+    beep(true); location.hash = `#/envio/${F}/${it.inv}`;
+  };
+  if (byL.length) return open(byL[0], "etq");
+  if (byP.length === 1) return open(byP[0], "prod");
+  if (byP.length > 1) {
+    beep(true);
+    $("choiceTitle").textContent = "Mesmo EAN em " + byP.length + " etiquetas";
+    $("choiceList").innerHTML = `<p style="margin:0;font-size:13px;color:#cfcfcf">Esse código está em mais de uma linha do envio. Confira a etiqueta para saber qual é:</p>` +
+      byP.map((it) => `<button data-inv="${esc(it.inv)}"><b class="mono">${esc(it.inv)}</b> · ${esc(it.titulo)}<br><span style="color:var(--muted);font-size:12px">${esc(it.identificacao || "")} · ${fmt(it.conferidas)}/${fmt(it.unidades)} un.</span></button>`).join("");
+    $("choiceList").querySelectorAll("button").forEach((b) => (b.onclick = () => { hide("choiceModal"); open(S.itens.find((i) => i.inv === b.dataset.inv), "prod"); }));
+    show("choiceModal"); return;
+  }
+  beep(false);
+  toast("Esse código não pertence a nenhum produto do envio #" + S.envio.frete, 4000);
+}
+
+// ---------- Scanner (câmera + teclado) ----------
+let cam = null, camOn = false, lastCode = "", lastAt = 0;
+const SCAN_TXT = {
+  prod: ["Ler código do produto", "Aponte para o código de barras da embalagem (EAN)"],
+  etq: ["Ler etiqueta Full", "Aponte para o código de barras da etiqueta do Mercado Livre"],
+  achar: ["Achar produto", "Leia a etiqueta ou o código de qualquer produto do envio"],
+};
+async function openScanner(slot) {
+  S.slot = slot;
+  $("scanTitle").textContent = SCAN_TXT[slot][0];
+  $("scanHint").textContent = SCAN_TXT[slot][1];
+  $("manual").value = ""; hide("camErr");
+  show("scanModal");
+  setTimeout(() => $("manual").focus({ preventScroll: true }), 50);
+  if (camOn) return;
+  try {
+    const F = Html5QrcodeSupportedFormats;
+    cam = cam || new Html5Qrcode("cam", {
+      verbose: false,
+      formatsToSupport: [F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E, F.CODE_128, F.CODE_39, F.ITF, F.QR_CODE, F.DATA_MATRIX],
+      experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+    });
+    camOn = true;
+    await cam.start({ facingMode: "environment" },
+      { fps: 12, qrbox: (w, h) => ({ width: Math.floor(w * 0.82), height: Math.floor(Math.min(h * 0.5, 170)) }) },
+      onCamCode, () => {});
+    hide("camFrame");
+  } catch (e) {
+    camOn = false;
+    show("camFrame");
+    $("camErr").textContent = "Câmera indisponível (" + (e.message || e) + "). Digite o código ou use o leitor USB.";
+    show("camErr");
+  }
+}
+async function closeScanner() {
+  hide("scanModal");
+  if (cam && camOn) { try { await cam.stop(); } catch {} camOn = false; }
+}
+function onCamCode(text) {
+  const now = Date.now();
+  if (text === lastCode && now - lastAt < 2500) return;
+  lastCode = text; lastAt = now;
+  deliver(text);
+}
+function submitManual() { const v = $("manual").value.trim(); if (v) deliver(v); }
+async function deliver(code) {
+  const slot = S.slot;
+  await closeScanner();
+  if (slot === "achar") onFind(code); else onRead(slot, code);
+}
+
+// Leitor USB/Bluetooth fora do modal: ele "digita" rápido e termina com Enter.
+// Na Tela 03 vai para a leitura que falta; na Tela 02 acha o produto.
+let kb = "", kbAt = 0;
+document.addEventListener("keydown", (ev) => {
+  if (!$("scanModal").classList.contains("hidden")) return;
+  if (/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || "")) return;
+  const now = Date.now();
+  if (now - kbAt > 80) kb = "";
+  kbAt = now;
+  if (ev.key === "Enter") {
+    const code = kb; kb = "";
+    if (code.length < 4) return;
+    const parts = location.hash.split("/");
+    if (parts[3]) {
+      const it = curItem();
+      const isLabel = /[A-Z]{4}\d{5}/.test(norm(code));
+      onRead(isLabel && precisaEtiqueta(it) ? "etq" : "prod", code);
+    } else if (parts[2]) onFind(code);
+    return;
+  }
+  if (ev.key.length === 1) kb += ev.key;
+});
+
+route();
+</script>
+</body>
+</html>

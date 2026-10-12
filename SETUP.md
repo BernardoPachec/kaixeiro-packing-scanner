@@ -117,3 +117,21 @@ packing-scanner/
 │   └── seed_token.js  alternativa via terminal ao seed_token.sql (opcional, não usada no fluxo padrão)
 └── SETUP.md           este guia
 ```
+
+---
+
+## Scanner Full (conferência de envios ao Full) — aba 🏬
+
+Página `public/full.html`, aberta pela aba 🏬. Fluxo: **importar o PDF do frete → escolher o produto → ler o código do produto → colar e ler a etiqueta do ML → "Próxima unidade"**.
+
+- **De onde vem o envio:** o ML não tem API pública de envios Full. O app lê no navegador o PDF
+  "Lista de produtos e instruções de preparação" (`Inbound-<frete>-preparation-instructions.pdf`,
+  baixado no Seller Center). Também aceita o CSV da lista do galpão (`lista-galpao-*.csv`).
+  Reimportar o PDF final mantém o que já foi conferido.
+- **API do ML:** depois de importar, `/api/full` (acao `enriquecer`) busca cada SKU, casa pelo
+  Código ML (`inventory_id`) e grava foto, MLB e GTINs do anúncio.
+- **Regra da leitura:** produto = EAN do PDF, GTIN do anúncio ou SKU; etiqueta = Código ML.
+  Linhas com identificação "Código universal" não levam etiqueta: basta ler o EAN.
+- **Leitor USB/Bluetooth** funciona sem abrir a câmera (ele "digita" o código e dá Enter).
+- **Banco:** rode uma vez `supabase-full.sql` no SQL Editor do Supabase (cria `full_envios`,
+  `full_envio_itens`, `full_leituras` e a função `full_conferir`).
