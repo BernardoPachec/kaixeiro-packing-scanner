@@ -65,6 +65,17 @@ async function sbDelete(table, query) {
   return r.json();
 }
 
+// Atualiza só as colunas passadas nas linhas que casam com o filtro (não cria linha nova).
+async function sbUpdate(table, query, patch) {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, {
+    method: "PATCH",
+    headers: { ...sbHeaders(), Prefer: "return=representation" },
+    body: JSON.stringify(patch),
+  });
+  if (!r.ok) throw new Error(`Supabase update ${table}: ${r.status} ${await r.text()}`);
+  return r.json();
+}
+
 // Chama uma função SQL (ex.: full_conferir) via PostgREST.
 async function sbRpc(fn, args) {
   const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
@@ -263,6 +274,7 @@ module.exports = {
   sbUpsert,
   sbInsertIfNew,
   sbDelete,
+  sbUpdate,
   sbRpc,
   LOGISTIC_LABELS,
 };

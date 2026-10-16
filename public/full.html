@@ -83,6 +83,14 @@
   .empty{padding:40px;text-align:center;color:var(--muted)}
   .bar{height:4px;background:#222} .bar > i{display:block;height:100%;background:var(--y)}
   .flag{font:600 10px/1.3 var(--fh);letter-spacing:.08em;text-transform:uppercase;color:var(--badtxt);border:1px solid #5c2323;padding:3px 7px;white-space:nowrap}
+  .flag-y{color:var(--y);border-color:#5a4210}
+  .mini{background:transparent;border:0;color:var(--dim);font:500 12px var(--fb);cursor:pointer;padding:2px 0;text-decoration:underline;text-underline-offset:3px}
+  .mini:hover{color:var(--badtxt)}
+  .mini.y:hover{color:var(--y)}
+  .trow.alerta{background:rgba(243,170,7,.08);box-shadow:inset 4px 0 0 var(--y)}
+  .trow.alerta:hover{background:rgba(243,170,7,.13)}
+  .alerta-box{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--y);background:rgba(243,170,7,.08);color:var(--y);padding:10px 12px;font-size:14px;line-height:1.4}
+  .alerta-box b{font-family:var(--fh);letter-spacing:.08em;text-transform:uppercase}
   .chip{font:600 11px var(--fh);letter-spacing:.08em;border:1px solid var(--line2);padding:2px 7px;color:#bdbdbd;white-space:nowrap}
   .chip.y{border-color:#5a4210;color:var(--y)}
   .st{font:500 13px var(--fh);letter-spacing:.1em;text-transform:uppercase;white-space:nowrap}
@@ -150,6 +158,7 @@
   .quem-grid button{height:68px;background:#000;border:1px solid var(--line2);color:#fff;font:600 24px var(--fh);letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
   .quem-grid button:hover{border-color:var(--y);color:var(--y)}
   .quem-grid button.last{border-color:var(--y)}
+  .quem-grid button.on{background:var(--y);border-color:var(--y);color:#000}
 
   /* Modais */
   .modal{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center;padding:16px}
@@ -250,12 +259,13 @@
         <button class="btn ghost qtd-tudo" id="qtdTudo" onclick="setQtd(S.qtdMax)">Tudo</button>
       </div>
       <span id="qtdInfo" style="font-size:13px;color:var(--muted)"></span>
-      <span class="lbl" style="margin-top:6px">Quem etiquetou</span>
+      <span class="lbl" style="margin-top:6px">Quem etiquetou · pode marcar mais de um</span>
       <div class="quem-grid" id="quemGrid"></div>
-      <div style="display:flex;gap:8px">
+      <form style="display:flex;gap:8px" onsubmit="event.preventDefault();addOutro()">
         <input class="minput" id="quemOutro" placeholder="Outro: digite o nome" style="font-family:var(--fb);font-size:18px;height:56px">
-        <button class="btn" style="height:56px" onclick="pickQuem($('quemOutro').value)">Outro</button>
-      </div>
+        <button class="btn ghost" type="submit" style="height:56px">+ Outro</button>
+      </form>
+      <button class="btn btn-done" id="quemGo" style="height:68px;font-size:22px" onclick="confirmarQuem()" disabled>Escolha quem etiquetou</button>
     </div>
   </div>
 </div>
@@ -427,6 +437,7 @@ function renderListaRows(list) {
         <span style="font:600 24px/1 var(--fh)">#${esc(e.frete)}</span>
         <span style="font-size:13px;color:var(--muted)">${e.produtos} produtos · importado ${new Date(e.importado_em).toLocaleDateString("pt-BR")}</span>
         ${e.divergencias && !desp ? '<span class="flag">Leitura divergente</span>' : ""}
+        ${e.alertas && !desp ? `<span class="flag flag-y">${e.alertas} produto(s) em alerta</span>` : ""}
       </div>
       <span style="font:500 20px var(--fh)">${fmt(e.declaradas)} <span style="color:var(--dim)">/ ${fmt(e.conferidas)}</span></span>
       <div style="display:flex;flex-direction:column;gap:3px"><span>${esc(e.data_coleta || "—")}</span><span style="font-size:12px;color:var(--muted)">${esc(e.centro || "Centro não informado")}</span></div>
@@ -435,7 +446,10 @@ function renderListaRows(list) {
         <div class="bar"><i style="width:${p}%;background:${done?"var(--ok)":Y}"></i></div>
       </div>
       <span class="st" style="color:${st[1]}">${st[0]}</span>
-      <span class="cta" style="background:${desp?"transparent":Y};color:${desp?Y:"#000"}">${desp ? "Detalhes" : "Montar"} ${ICON.chev}</span>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;justify-self:end">
+        <span class="cta" style="background:${desp?"transparent":Y};color:${desp?Y:"#000"}">${desp ? "Detalhes" : "Montar"} ${ICON.chev}</span>
+        <button class="mini" onclick="event.stopPropagation();descartarEnvio('${esc(e.frete)}')">descartar</button>
+      </div>
     </div>`;
   }).join("") : `<div class="empty">${S.envios.length ? "Nenhum envio encontrado." : "Nenhum envio ainda. Importe o PDF \"Lista de produtos e instruções de preparação\" do Seller Center."}</div>`;
 }
@@ -617,7 +631,8 @@ function renderEnvio() {
   const tot = S.itens.reduce((a, i) => a + i.unidades, 0), done = S.itens.reduce((a, i) => a + i.conferidas, 0);
   const pend = S.itens.filter((i) => i.conferidas < i.unidades);
   const semFoto = S.itens.filter((i) => !i.enriquecido_em).length;
-  const lista = S.itemFiltro === "pend" ? pend : S.itens;
+  const emAlerta = S.itens.filter((i) => i.alerta);
+  const lista = S.itemFiltro === "pend" ? pend : S.itemFiltro === "alerta" ? emAlerta : S.itens;
   const desp = e.status === "despachado";
   $("view").innerHTML = `
   <main>
@@ -635,7 +650,7 @@ function renderEnvio() {
 
     <div class="tools">
       <button class="btn" onclick="openScanner('achar')">${ICON.barcode.replace(/44/g, 20)} Escanear para achar o produto</button>
-      <div class="seg">${[["todos", "Todos · " + S.itens.length], ["pend", "Pendentes · " + pend.length]].map(([k, l]) =>
+      <div class="seg">${[["todos", "Todos · " + S.itens.length], ["pend", "Pendentes · " + pend.length], ...(emAlerta.length || S.itemFiltro === "alerta" ? [["alerta", "⚠ Em alerta · " + emAlerta.length]] : [])].map(([k, l]) =>
         `<button class="${S.itemFiltro === k ? "on" : ""}" onclick="S.itemFiltro='${k}';renderEnvio()">${l}</button>`).join("")}</div>
     </div>
 
@@ -645,7 +660,7 @@ function renderEnvio() {
       <div class="thead g-itm lbl"><span>Produto · ${S.itens.length} itens</span><span>Declaradas</span><span>Conferidas</span><span>Status</span><span></span></div>
       ${lista.length ? lista.map((it) => {
         const [st, sc] = itemStatus(it), p = pct(it.conferidas, it.unidades);
-        return `<div class="trow g-itm" onclick="go('#/envio/${F}/${it.inv}')">
+        return `<div class="trow g-itm ${it.alerta ? "alerta" : ""}" onclick="go('#/envio/${F}/${it.inv}')">
           <div class="full" style="display:flex;gap:14px;align-items:center;min-width:0">
             ${thumb(it)}
             <div style="display:flex;flex-direction:column;gap:5px;min-width:0">
@@ -658,6 +673,8 @@ function renderEnvio() {
                 ${it.ean ? "" : '<span class="chip">SEM EAN</span>'}
                 ${(it.tags || []).map((t) => `<span class="chip">${esc(t)}</span>`).join("")}
               </div>
+              ${it.alerta ? `<div class="alerta-box"><span>⚠</span><span><b>Em alerta</b><br>${esc(it.alerta_motivo || "")}</span></div>` : ""}
+              <button class="mini y" style="align-self:flex-start" onclick="event.stopPropagation();openAlerta('${it.inv}')">⚠ ${it.alerta ? "editar alerta" : "marcar alerta"}</button>
             </div>
           </div>
           <span style="font:500 22px var(--fh)">${fmt(it.unidades)} <span style="font-size:14px;color:var(--dim)">un.</span></span>
@@ -706,6 +723,48 @@ async function delEnvio() {
   await api({ acao: "excluir", frete: S.envio.frete });
   S.envio = null; go("#/");
 }
+// Tela 02: alerta amarelo num produto (ainda chegando, em falta, não vai mais, alterar no ML...).
+const MOTIVOS_ALERTA = ["Ainda está chegando", "Em falta no galpão", "Não vamos mais enviar", "Precisa alterar o pedido no site do ML"];
+function openAlerta(inv) {
+  const it = S.itens.find((i) => i.inv === inv); if (!it) return;
+  IMP = { alertaInv: inv };
+  $("impBody").innerHTML = `
+    <p style="margin:0;font-size:14px;color:#cfcfcf"><b class="mono">${esc(it.inv)}</b> · ${esc(it.titulo)}</p>
+    <span class="lbl">Qual é o problema?</span>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">${MOTIVOS_ALERTA.map((m) =>
+      `<button class="btn quiet sm" onclick="addMotivo(this.textContent)">${esc(m)}</button>`).join("")}</div>
+    <textarea id="alertaTxt" class="minput" style="height:120px;padding:10px;font-family:var(--fb);font-size:16px;line-height:1.5" placeholder="Escreva o problema deste produto/anúncio">${esc(it.alerta_motivo || "")}</textarea>
+    <button class="btn" id="alertaGo" onclick="salvarAlerta(true)">⚠ ${it.alerta ? "Salvar alerta" : "Colocar em alerta"}</button>
+    ${it.alerta ? `<button class="btn quiet" onclick="salvarAlerta(false)">Resolvido: tirar o alerta</button>` : ""}`;
+  show("impModal");
+  setTimeout(() => $("alertaTxt").focus(), 50);
+}
+function addMotivo(m) {
+  const t = $("alertaTxt"); t.value = t.value.trim() ? `${t.value.trim()} · ${m}` : m; t.focus();
+}
+async function salvarAlerta(ligar) {
+  const inv = IMP.alertaInv, motivo = ligar ? $("alertaTxt").value.trim() : "";
+  if (ligar && !motivo) return toast("Escreva ou escolha qual é o problema.");
+  try {
+    const r = await api({ acao: "alerta", frete: S.envio.frete, inv, alerta: ligar, motivo });
+    Object.assign(S.itens.find((i) => i.inv === inv), r.item);
+    closeImport();
+    if (location.hash.split("/")[3]) renderProduto(inv); else renderEnvio();
+    toast(ligar ? "Produto em alerta." : "Alerta removido.");
+  } catch (e) { toast(e.message, 5000); }
+}
+
+// Tela 01: descartar um envio direto da lista (os checklists dos anúncios ficam guardados).
+async function descartarEnvio(frete) {
+  const e = S.envios.find((x) => x.frete === frete);
+  const feito = e && e.conferidas ? ` Já tem ${fmt(e.conferidas)} un. conferida(s), que se perdem.` : "";
+  if (!confirm(`Descartar o envio #${frete} do scanner?${feito} (Nada muda no Mercado Livre.)`)) return;
+  try {
+    await api({ acao: "excluir", frete });
+    if (S.envio && S.envio.frete === frete) S.envio = null;
+    await loadEnvios(); renderLista(); toast(`Envio #${frete} descartado.`);
+  } catch (err) { toast(err.message, 5000); }
+}
 
 // ---------- Tela 03: conferência do produto ----------
 function curItem() { return S.itens.find((i) => i.inv === S.inv); }
@@ -724,6 +783,7 @@ function renderProduto(inv) {
   $("view").innerHTML = `
   <main class="narrow">
     <a class="eyebrow" href="#/envio/${F}" style="display:flex;align-items:center;gap:6px">${ICON.back}Tela 03 · Voltar ao envio #${esc(e.frete)}</a>
+    ${it.alerta ? `<div class="alerta-box" style="font-size:16px"><span style="font-size:22px">⚠</span><span style="flex:1"><b>Produto em alerta</b><br>${esc(it.alerta_motivo || "")}</span><button class="mini y" onclick="openAlerta('${it.inv}')">editar</button></div>` : ""}
 
     <section class="pcard">
       <span class="reg" style="top:-6px;left:-6px">+</span><span class="reg" style="top:-6px;right:-6px">+</span>
@@ -788,7 +848,10 @@ function renderProduto(inv) {
       <label><input type="checkbox" ${pref("reopen", true) ? "checked" : ""} onchange="setPref('reopen',this.checked)"> Reabrir a câmera depois de cada unidade</label>
     </div>
 
-    <a href="javascript:editChecklist()" style="align-self:flex-end;font-size:11px;color:var(--dim);letter-spacing:.04em;margin-top:24px">alterar checklist</a>
+    <div style="align-self:flex-end;display:flex;gap:16px;margin-top:24px;font-size:11px;letter-spacing:.04em">
+      ${it.alerta ? "" : `<a href="javascript:openAlerta('${it.inv}')" style="color:var(--dim)">marcar alerta</a>`}
+      <a href="javascript:editChecklist()" style="color:var(--dim)">alterar checklist</a>
+    </div>
   </main>`;
   if (S.openNext) { const n = S.openNext; S.openNext = null; if (R.state === "half") openScanner(n); }
 }
@@ -905,16 +968,47 @@ function openQuem() {
   S.qtdMax = Math.max(1, it.unidades - it.conferidas);
   setQtd(1);
   $("qtdTudo").textContent = `Tudo (${fmt(S.qtdMax)})`;
-  let ultimo = ""; try { ultimo = localStorage.getItem("kxfull.quem") || ""; $("quemOutro").value = localStorage.getItem("kxfull.outro") || ""; } catch {}
-  $("quemGrid").innerHTML = EQUIPE.map((n) => `<button class="${n === ultimo ? "last" : ""}" onclick="pickQuem('${n}')">${n}</button>`).join("");
+  // Ninguém vem marcado: cada unidade exige escolher. A(s) última(s) pessoa(s) só ganham
+  // borda amarela, e os nomes digitados em "Outro" ficam como botões nas próximas vezes.
+  S.quemSel = new Set();
+  let ultimos = [], outros = [];
+  try { ultimos = JSON.parse(localStorage.getItem("kxfull.quem.ultimos") || "[]"); outros = JSON.parse(localStorage.getItem("kxfull.outros") || "[]"); } catch {}
+  S.quemLista = [...EQUIPE, ...outros.filter((n) => !EQUIPE.includes(n))];
+  S.quemUltimos = ultimos;
+  $("quemOutro").value = "";
+  renderQuem();
   show("quemModal");
 }
-function pickQuem(nome) {
-  nome = String(nome || "").trim();
-  if (!nome) return toast("Digite o nome em \"Outro\".");
-  try { localStorage.setItem("kxfull.quem", nome); if (!EQUIPE.includes(nome)) localStorage.setItem("kxfull.outro", nome); } catch {}
+function renderQuem() {
+  $("quemGrid").innerHTML = S.quemLista.map((n, k) =>
+    `<button class="${S.quemSel.has(n) ? "on" : S.quemUltimos.includes(n) ? "last" : ""}" onclick="toggleQuem(${k})">${S.quemSel.has(n) ? "✓ " : ""}${esc(n)}</button>`).join("");
+  const nomes = [...S.quemSel];
+  $("quemGo").disabled = !nomes.length;
+  $("quemGo").textContent = nomes.length ? `Confirmar · ${nomes.join(", ")}` : "Escolha quem etiquetou";
+}
+function toggleQuem(k) {
+  const n = S.quemLista[k];
+  S.quemSel.has(n) ? S.quemSel.delete(n) : S.quemSel.add(n);
+  renderQuem();
+}
+function addOutro() {
+  const n = $("quemOutro").value.trim().replace(/\s+/g, " ");
+  if (!n) return toast("Digite o nome em \"Outro\".");
+  if (!S.quemLista.includes(n)) S.quemLista.push(n);
+  S.quemSel.add(n); $("quemOutro").value = "";
+  renderQuem();
+}
+function confirmarQuem() {
+  const nomes = [...S.quemSel];
+  if (!nomes.length) return toast("Escolha quem etiquetou.");
+  try {
+    localStorage.setItem("kxfull.quem.ultimos", JSON.stringify(nomes));
+    const outros = S.quemLista.filter((n) => !EQUIPE.includes(n) && nomes.includes(n));
+    const antigos = JSON.parse(localStorage.getItem("kxfull.outros") || "[]");
+    localStorage.setItem("kxfull.outros", JSON.stringify([...new Set([...outros, ...antigos])].slice(0, 6)));
+  } catch {}
   hide("quemModal");
-  confirmUnit(nome);
+  confirmUnit(nomes.join(", "));
 }
 function editChecklist() {
   const it = curItem(); if (!it) return;

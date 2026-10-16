@@ -17,11 +17,12 @@
 //                                     -> checklist da etiqueta (o que vai no anúncio), revisado
 // POST /api/full { acao:"checklists_lote", checklists:[...] }  -> carga inicial (a revisar)
 //      ("conferir" aceita também responsavel e passos: quem embalou e o que foi feito)
+// POST /api/full { acao:"alerta", frete, inv, alerta:true|false, motivo }  -> alerta amarelo no produto
 // POST /api/full { acao:"editar", frete, centro?, data_coleta?, status? }
 // POST /api/full { acao:"excluir", frete }
 
 const {
-  readTokenRow, mlFetchWithToken, sbSelect, sbUpsert, sbDelete, sbRpc,
+  readTokenRow, mlFetchWithToken, sbSelect, sbUpsert, sbDelete, sbUpdate, sbRpc,
 } = require("./_ml");
 
 const SELLER_ID = process.env.ML_SELLER_ID || "2225972641";
@@ -49,7 +50,9 @@ const send = (res, code, obj) => {
 async function listar() {
   const [envios, itens] = await Promise.all([
     sbSelect("full_envios", "select=*&order=importado_em.desc&limit=100"),
-    sbSelect("full_envio_itens", "select=frete,unidades,conferidas&limit=10000"),
+    // Sem a coluna "alerta" (SQL de 16/10 ainda não rodado) a lista continua funcionando.
+    sbSelect("full_envio_itens", "select=frete,unidades,conferidas,alerta&limit=10000")
+      .catch(() => sbSelect("full_envio_itens", "select=frete,unidades,conferidas&limit=10000")),
   ]);
   const div = await sbSelect(
     "full_leituras",
@@ -64,6 +67,7 @@ async function listar() {
       // Envio que veio só da lista do ML (sem produtos ainda): usa o total da tela.
       declaradas: linhas.length ? linhas.reduce((a, i) => a + i.unidades, 0) : e.total_unidades || 0,
       conferidas: linhas.reduce((a, i) => a + i.conferidas, 0),
+      alertas: linhas.filter((i) => i.alerta).length,
       divergencias: comDivergencia.has(e.frete),
     };
   });
@@ -233,7 +237,7 @@ async function enriquecer(frete) {
 
 // ---- Leituras e contagem ---------------------------------------------------------
 
-const RESULTADOS = ["ok", "sem_leitura", "divergente", "manual", "desfeito"];
+const RESULTADOS = ["ok", "sem_leitura", "divergente", "manual", "desfeito", "alerta"];
 
 async function registrarLeitura(b) {
   if (!RESULTADOS.includes(b.resultado)) return;
@@ -326,6 +330,20 @@ module.exports = async (req, res) => {
         if (!rows.length) return send(res, 400, { ok: false, error: "Código ML (inv) inválido." });
         await sbUpsert("full_checklists_etq", rows, "inv");
         return send(res, 200, { ok: true, gravados: rows.length, checklist: rows[0] });
+      }
+
+      case "alerta": {
+        // Produto em alerta amarelo: ainda chegando, em falta, não vai mais, alterar no ML...
+        if (!b.frete || !b.inv) return send(res, 400, { ok: false, error: "frete e inv são obrigatórios." });
+        const ligado = !!b.alerta;
+        const motivo = clean(b.motivo);
+        if (ligado && !motivo) return send(res, 400, { ok: false, error: "Escreva qual é o problema." });
+        const rows = await sbUpdate("full_envio_itens", `frete=eq.${enc(String(b.frete))}&inv=eq.${enc(String(b.inv))}`,
+          { alerta: ligado, alerta_motivo: ligado ? motivo : null, alerta_em: ligado ? new Date().toISOString() : null });
+        if (!rows.length) return send(res, 404, { ok: false, error: "Produto não encontrado neste envio." });
+        await registrarLeitura({ frete: b.frete, inv: b.inv, resultado: "alerta",
+          detalhe: ligado ? `alerta: ${motivo}` : "alerta removido", responsavel: b.responsavel });
+        return send(res, 200, { ok: true, item: rows[0] });
       }
 
       case "leitura":
