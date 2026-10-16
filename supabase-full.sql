@@ -106,3 +106,9 @@ alter table full_checklists_etq enable row level security;
 alter table full_envio_itens add column if not exists alerta        boolean not null default false;
 alter table full_envio_itens add column if not exists alerta_motivo text;
 alter table full_envio_itens add column if not exists alerta_em     timestamptz;
+
+-- ============================================================
+--  Adição de 16/10/2026 (2): produto SEPARADO (Tela 02)
+-- ============================================================
+alter table full_envio_itens add column if not exists separado     boolean not null default false;
+alter table full_envio_itens add column if not exists separado_em  timestamptz;

@@ -84,6 +84,12 @@
   .bar{height:4px;background:#222} .bar > i{display:block;height:100%;background:var(--y)}
   .flag{font:600 10px/1.3 var(--fh);letter-spacing:.08em;text-transform:uppercase;color:var(--badtxt);border:1px solid #5c2323;padding:3px 7px;white-space:nowrap}
   .flag-y{color:var(--y);border-color:#5a4210}
+  .filtros{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .fchip{height:38px;padding:0 14px;background:#000;border:1px solid var(--line2);color:#cfcfcf;font:600 13px var(--fh);letter-spacing:.08em;text-transform:uppercase;cursor:pointer;white-space:nowrap}
+  .fchip:hover{border-color:#555;color:#fff}
+  .fchip.on{background:var(--y);border-color:var(--y);color:#000}
+  .chip.w{border-color:#fff;color:#fff}
+  .mini.w:hover{color:#fff}
   .mini{background:transparent;border:0;color:var(--dim);font:500 12px var(--fb);cursor:pointer;padding:2px 0;text-decoration:underline;text-underline-offset:3px}
   .mini:hover{color:var(--badtxt)}
   .mini.y:hover{color:var(--y)}
@@ -615,15 +621,32 @@ async function confirmImport() {
 async function loadEnvio(frete) {
   const d = await apiGet("?frete=" + encodeURIComponent(frete));
   S.envio = d.envio; S.itens = d.itens; S.leituras = d.leituras; S.checklists = d.checklists || {}; S.checklistsEtq = d.checklists_etq || {};
+  S.feitosPor = d.feitos_por || {};
 }
 function itemStatus(it) {
   if (it.conferidas >= it.unidades) return ["Conferido", "var(--ok)"];
   if (it.conferidas > 0) return ["Em conferência", Y];
+  if (it.separado) return ["Separado", "#fff"];
   return ["Pendente", "var(--muted)"];
 }
 function thumb(it, cls = "thumb") {
   return it.foto ? `<div class="${cls}" style="background-image:url('${esc(it.foto)}')"></div>` : `<div class="${cls} ph">FOTO</div>`;
 }
+
+// Filtros da Tela 02: situação do produto + quem fez (nomes vindos do histórico do envio).
+function filtrosEnvio() {
+  const base = [
+    ["todos", "Todos", () => true],
+    ["pend", "Pendentes", (i) => i.conferidas < i.unidades],
+    ["prontos", "Prontos", (i) => i.conferidas >= i.unidades],
+    ["separados", "Separados", (i) => i.separado],
+    ["alerta", "⚠ Com alerta", (i) => i.alerta],
+  ];
+  const nomes = [...new Set(Object.values(S.feitosPor || {}).flat())].sort((a, b) => a.localeCompare(b, "pt-BR"));
+  const pessoas = nomes.map((n) => ["por:" + n, n, (i) => (S.feitosPor[i.inv] || []).includes(n)]);
+  return { base, pessoas, todos: [...base, ...pessoas] };
+}
+function setFiltro(k) { S.itemFiltro = k; renderEnvio(); }
 
 function renderEnvio() {
   const e = S.envio, F = encodeURIComponent(e.frete);
@@ -631,8 +654,10 @@ function renderEnvio() {
   const tot = S.itens.reduce((a, i) => a + i.unidades, 0), done = S.itens.reduce((a, i) => a + i.conferidas, 0);
   const pend = S.itens.filter((i) => i.conferidas < i.unidades);
   const semFoto = S.itens.filter((i) => !i.enriquecido_em).length;
-  const emAlerta = S.itens.filter((i) => i.alerta);
-  const lista = S.itemFiltro === "pend" ? pend : S.itemFiltro === "alerta" ? emAlerta : S.itens;
+  const fl = filtrosEnvio();
+  const atual = fl.todos.find(([k]) => k === S.itemFiltro) || fl.base[0];
+  const lista = S.itens.filter(atual[2]);
+  const chip = ([k, l, fn]) => `<button class="fchip ${atual[0] === k ? "on" : ""}" onclick="setFiltro('${esc(k).replace(/'/g, "\\'")}')">${esc(l)} · ${S.itens.filter(fn).length}</button>`;
   const desp = e.status === "despachado";
   $("view").innerHTML = `
   <main>
@@ -650,16 +675,21 @@ function renderEnvio() {
 
     <div class="tools">
       <button class="btn" onclick="openScanner('achar')">${ICON.barcode.replace(/44/g, 20)} Escanear para achar o produto</button>
-      <div class="seg">${[["todos", "Todos · " + S.itens.length], ["pend", "Pendentes · " + pend.length], ...(emAlerta.length || S.itemFiltro === "alerta" ? [["alerta", "⚠ Em alerta · " + emAlerta.length]] : [])].map(([k, l]) =>
-        `<button class="${S.itemFiltro === k ? "on" : ""}" onclick="S.itemFiltro='${k}';renderEnvio()">${l}</button>`).join("")}</div>
+      <button class="btn ghost" onclick="imprimirEnvio()">Imprimir PDF${atual[0] === "todos" ? "" : " · " + esc(atual[1])}</button>
+    </div>
+
+    <div class="filtros">
+      <span class="lbl">Filtrar</span>${fl.base.map(chip).join("")}
+      ${fl.pessoas.length ? `<span class="lbl" style="margin-left:6px">Feito por</span>${fl.pessoas.map(chip).join("")}` : ""}
     </div>
 
     <div class="notice">${ICON.info}<span>Enviar quantidade diferente da declarada gera custo por inconformidade. Nos produtos com <b style="color:${Y}">etiquetagem obrigatória</b>, leia o código do produto <b>antes</b> de colar a etiqueta do ML por cima.</span></div>
 
     <div class="table">
-      <div class="thead g-itm lbl"><span>Produto · ${S.itens.length} itens</span><span>Declaradas</span><span>Conferidas</span><span>Status</span><span></span></div>
+      <div class="thead g-itm lbl"><span>Produto · ${lista.length} de ${S.itens.length}</span><span>Declaradas</span><span>Conferidas</span><span>Status</span><span></span></div>
       ${lista.length ? lista.map((it) => {
         const [st, sc] = itemStatus(it), p = pct(it.conferidas, it.unidades);
+        const por = (S.feitosPor || {})[it.inv] || [];
         return `<div class="trow g-itm ${it.alerta ? "alerta" : ""}" onclick="go('#/envio/${F}/${it.inv}')">
           <div class="full" style="display:flex;gap:14px;align-items:center;min-width:0">
             ${thumb(it)}
@@ -667,6 +697,7 @@ function renderEnvio() {
               <span style="font-size:12px;color:var(--muted)">Código ML <span class="mono" style="color:#fff">${esc(it.inv)}</span> · SKU <span class="mono" style="color:#fff">${esc(it.sku || "—")}</span></span>
               <span style="font-size:16px;font-weight:600;line-height:1.3">${esc(it.titulo)}</span>
               <div style="display:flex;gap:6px;flex-wrap:wrap">
+                ${it.separado ? '<span class="chip w">SEPARADO</span>' : ""}
                 <span class="chip ${precisaEtiqueta(it) ? "y" : ""}">${precisaEtiqueta(it) ? "ETIQUETAGEM" : "CÓDIGO UNIVERSAL"}</span>
                 ${ckEtq(it)?.kit ? `<span class="chip y">KIT · ${passosDe(it).length} ITENS</span>` : ""}
                 ${ckEtq(it) ? "" : '<span class="chip">SEM CHECKLIST</span>'}
@@ -674,7 +705,11 @@ function renderEnvio() {
                 ${(it.tags || []).map((t) => `<span class="chip">${esc(t)}</span>`).join("")}
               </div>
               ${it.alerta ? `<div class="alerta-box"><span>⚠</span><span><b>Em alerta</b><br>${esc(it.alerta_motivo || "")}</span></div>` : ""}
-              <button class="mini y" style="align-self:flex-start" onclick="event.stopPropagation();openAlerta('${it.inv}')">⚠ ${it.alerta ? "editar alerta" : "marcar alerta"}</button>
+              ${por.length ? `<span style="font-size:12px;color:var(--muted)">Feito por <b style="color:#fff">${esc(por.join(", "))}</b></span>` : ""}
+              <div style="display:flex;gap:16px;flex-wrap:wrap">
+                <button class="mini w" onclick="event.stopPropagation();toggleSeparado('${it.inv}')">${it.separado ? "✓ separado · desfazer" : "☐ marcar separado"}</button>
+                <button class="mini y" onclick="event.stopPropagation();openAlerta('${it.inv}')">⚠ ${it.alerta ? "editar alerta" : "marcar alerta"}</button>
+              </div>
             </div>
           </div>
           <span style="font:500 22px var(--fh)">${fmt(it.unidades)} <span style="font-size:14px;color:var(--dim)">un.</span></span>
@@ -682,7 +717,7 @@ function renderEnvio() {
           <span class="st" style="color:${sc}">${st}</span>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${Y}" stroke-width="1.5"><path d="m9 18 6-6-6-6"/></svg>
         </div>`;
-      }).join("") : S.itens.length ? '<div class="empty">Tudo conferido neste envio. ✓</div>'
+      }).join("") : S.itens.length ? `<div class="empty">Nenhum produto em "${esc(atual[1])}". <a href="javascript:setFiltro('todos')">Ver todos</a></div>`
         : '<div class="empty">Este envio veio da lista do ML e ainda não tem produtos.<br>Abra o envio no Mercado Livre e clique no botão <b>Enviar ao Scanner</b>, ou importe o PDF do frete.</div>'}
     </div>
 
@@ -696,6 +731,97 @@ function renderEnvio() {
     ${S.leituras.length ? `<div class="log"><span class="lbl">Últimas leituras</span>${S.leituras.slice(0, 12).map((l) =>
       `<span>${new Date(l.criado_em).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })} · <b style="color:${l.resultado === "ok" ? "var(--ok)" : l.resultado === "divergente" ? "var(--badtxt)" : "var(--muted)"}">${esc(l.resultado)}</b> · ${esc(l.inv || "—")} ${l.responsavel ? "· por <b>" + esc(l.responsavel) + "</b>" : ""} ${l.detalhe ? "· " + esc(l.detalhe) : ""}</span>`).join("")}</div>` : ""}
   </main>`;
+}
+
+async function toggleSeparado(inv) {
+  const it = S.itens.find((i) => i.inv === inv); if (!it) return;
+  try {
+    const r = await api({ acao: "separado", frete: S.envio.frete, inv, separado: !it.separado });
+    Object.assign(it, r.item);
+    renderEnvio();
+    toast(it.separado ? "Marcado como separado." : "Separação desfeita.", 1400);
+  } catch (e) { toast(e.message, 5000); }
+}
+
+// Folha para imprimir: lista do envio (na ordem e no filtro da tela) com foto, códigos, o que vai
+// em cada pacote, alertas e caixas para marcar à mão. Abre numa janela e chama a impressão
+// (no diálogo, "Salvar como PDF" gera o arquivo).
+function imprimirEnvio() {
+  const e = S.envio, fl = filtrosEnvio();
+  const atual = fl.todos.find(([k]) => k === S.itemFiltro) || fl.base[0];
+  const lista = S.itens.filter(atual[2]);
+  if (!lista.length) return toast("Nenhum produto neste filtro para imprimir.");
+  const unid = lista.reduce((a, i) => a + i.unidades, 0);
+  const agora = new Date().toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  const linhas = lista.map((it, n) => {
+    const ck = ckEtq(it), por = (S.feitosPor || {})[it.inv] || [];
+    const vai = !ck ? `<i>Sem checklist cadastrado: conferir no anúncio o que vai junto.</i>`
+      : !(ck.passos || []).length ? "Só o produto (sem flanela, aplicador ou outro item)."
+      : `<ul>${ck.passos.map((p) => `<li><span class="cx"></span>${esc(p)}</li>`).join("")}</ul>`;
+    return `<tr class="${it.alerta ? "alerta" : ""}">
+      <td class="num">${n + 1}</td>
+      <td class="foto">${it.foto ? `<img src="${esc(it.foto)}" alt="">` : '<div class="semfoto">sem foto</div>'}</td>
+      <td class="prod">
+        <div class="cods"><b class="ml">${esc(it.inv)}</b> · SKU ${esc(it.sku || "—")} · EAN ${esc(it.ean || "N/A")}</div>
+        <div class="tit">${esc(it.titulo)}</div>
+        <div class="tags">${esc(it.identificacao || "")}${ck?.kit ? " · KIT" : ""}${(it.tags || []).length ? " · " + esc(it.tags.join(", ")) : ""}${it.separado ? " · SEPARADO" : ""}</div>
+        ${(it.instrucoes || []).length ? `<div class="instr">${it.instrucoes.map(esc).join("<br>")}</div>` : ""}
+        ${it.alerta ? `<div class="alrt">⚠ ALERTA: ${esc(it.alerta_motivo || "")}</div>` : ""}
+      </td>
+      <td class="vai"><div class="lbl">O que vai</div>${vai}</td>
+      <td class="un"><b>${fmt(it.unidades)}</b><span>un.</span><div class="feitas">conferidas: ${fmt(it.conferidas)}</div>${por.length ? `<div class="feitas">por ${esc(por.join(", "))}</div>` : ""}</td>
+      <td class="ok"><span class="cx big"></span><div>sep.</div><span class="cx big"></span><div>feito</div></td>
+    </tr>`;
+  }).join("");
+  const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Envio Full #${esc(e.frete)}</title>
+<style>
+  @page{size:A4;margin:10mm}
+  *{box-sizing:border-box}
+  body{margin:0;font:11px/1.35 Arial,Helvetica,sans-serif;color:#000;background:#fff}
+  header{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:8px}
+  header h1{margin:0;font-size:20px}
+  header .sub{color:#333}
+  header .marca{font-weight:900;letter-spacing:.15em}
+  .resumo{display:flex;gap:16px;margin:0 0 8px;font-size:12px}
+  table{width:100%;border-collapse:collapse}
+  thead th{font-size:9px;text-transform:uppercase;letter-spacing:.08em;text-align:left;border-bottom:1px solid #000;padding:4px}
+  td{border-bottom:1px solid #bbb;padding:6px 4px;vertical-align:top}
+  tr{page-break-inside:avoid}
+  .num{width:18px;color:#555}
+  .foto{width:64px}.foto img{width:60px;height:60px;object-fit:contain;border:1px solid #ccc}
+  .semfoto{width:60px;height:60px;border:1px dashed #999;font-size:8px;display:flex;align-items:center;justify-content:center;color:#777}
+  .cods{font-family:Consolas,monospace;font-size:10px}.ml{font-size:13px}
+  .tit{font-weight:bold;font-size:12px;margin:2px 0}
+  .tags{font-size:9px;color:#444;text-transform:uppercase}
+  .instr{font-size:9px;color:#444;margin-top:3px}
+  .alrt{margin-top:4px;padding:3px 5px;border:1.5px solid #000;font-weight:bold;background:#eee}
+  tr.alerta td{background:#f4f4f4}
+  .vai{width:34%}.vai ul{margin:2px 0 0;padding:0;list-style:none}.vai li{margin:2px 0;display:flex;gap:5px;align-items:flex-start}
+  .lbl{font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:#555}
+  .cx{display:inline-block;flex:none;width:10px;height:10px;border:1.2px solid #000;margin-top:1px}
+  .cx.big{width:16px;height:16px}
+  .un{width:62px;text-align:center}.un b{font-size:20px;display:block}.un span{font-size:9px}
+  .feitas{font-size:8px;color:#444;margin-top:2px}
+  .ok{width:34px;text-align:center;font-size:8px}
+  footer{margin-top:10px;font-size:9px;color:#555;display:flex;justify-content:space-between}
+</style></head><body>
+<header>
+  <div><div class="marca">KAIXEIRO · SCANNER FULL</div><h1>Envio Full #${esc(e.frete)}</h1>
+  <div class="sub">${esc(e.centro || "Centro não informado")} · coleta ${esc(e.data_coleta || "sem data")}</div></div>
+  <div class="sub" style="text-align:right">Impresso em ${agora}${atual[0] === "todos" ? "" : `<br>Filtro: ${esc(atual[1])}`}</div>
+</header>
+<div class="resumo"><span><b>${lista.length}</b> produto(s)</span><span><b>${fmt(unid)}</b> unidade(s)</span>
+  <span><b>${lista.filter((i) => i.alerta).length}</b> em alerta</span><span><b>${lista.filter((i) => i.separado).length}</b> separado(s)</span></div>
+<table><thead><tr><th>#</th><th>Foto</th><th>Produto</th><th>O que vai no pacote</th><th>Qtd</th><th></th></tr></thead><tbody>${linhas}</tbody></table>
+<footer><span>Enviar quantidade diferente da declarada gera custo por inconformidade.</span><span>Separado por: ____________ · Conferido por: ____________</span></footer>
+<script>
+  const imgs=[...document.images];let falta=imgs.length;const vai=()=>setTimeout(()=>window.print(),150);
+  if(!falta)vai();else imgs.forEach(i=>{if(i.complete){if(--falta===0)vai();}else{i.onload=i.onerror=()=>{if(--falta===0)vai();};}});
+  setTimeout(()=>{if(falta>0){falta=0;window.print();}},6000);
+<\/script></body></html>`;
+  const w = window.open("", "_blank");
+  if (!w) return toast("O navegador bloqueou a janela de impressão. Libere pop-ups para este site.", 6000);
+  w.document.open(); w.document.write(html); w.document.close();
 }
 
 async function enrich(btn) {

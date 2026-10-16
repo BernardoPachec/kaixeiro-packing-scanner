@@ -18,6 +18,7 @@
 // POST /api/full { acao:"checklists_lote", checklists:[...] }  -> carga inicial (a revisar)
 //      ("conferir" aceita também responsavel e passos: quem embalou e o que foi feito)
 // POST /api/full { acao:"alerta", frete, inv, alerta:true|false, motivo }  -> alerta amarelo no produto
+// POST /api/full { acao:"separado", frete, inv, separado:true|false }      -> produto separado
 // POST /api/full { acao:"editar", frete, centro?, data_coleta?, status? }
 // POST /api/full { acao:"excluir", frete }
 
@@ -94,7 +95,15 @@ async function detalhe(frete) {
   if (invs) {
     for (const c of await sbSelect("full_checklists_etq", `inv=in.(${enc(invs)})&select=inv,passos,kit,revisado`)) checklists_etq[c.inv] = c;
   }
-  return { envio, itens, leituras, checklists, checklists_etq };
+  // Quem fez cada produto (para o filtro "Feito por" da Tela 02): nomes de todas as leituras.
+  const feitos_por = {};
+  const comNome = await sbSelect("full_leituras",
+    `frete=eq.${enc(frete)}&responsavel=not.is.null&resultado=in.(ok,sem_leitura,manual)&select=inv,responsavel&limit=10000`);
+  for (const l of comNome) {
+    const nomes = (feitos_por[l.inv] = feitos_por[l.inv] || []);
+    for (const n of String(l.responsavel).split(",").map((s) => s.trim()).filter(Boolean)) if (!nomes.includes(n)) nomes.push(n);
+  }
+  return { envio, itens, leituras, checklists, checklists_etq, feitos_por };
 }
 
 // ---- Importar (PDF/CSV já lidos no navegador) ----------------------------------
@@ -237,7 +246,7 @@ async function enriquecer(frete) {
 
 // ---- Leituras e contagem ---------------------------------------------------------
 
-const RESULTADOS = ["ok", "sem_leitura", "divergente", "manual", "desfeito", "alerta"];
+const RESULTADOS = ["ok", "sem_leitura", "divergente", "manual", "desfeito", "alerta", "separado"];
 
 async function registrarLeitura(b) {
   if (!RESULTADOS.includes(b.resultado)) return;
@@ -330,6 +339,17 @@ module.exports = async (req, res) => {
         if (!rows.length) return send(res, 400, { ok: false, error: "Código ML (inv) inválido." });
         await sbUpsert("full_checklists_etq", rows, "inv");
         return send(res, 200, { ok: true, gravados: rows.length, checklist: rows[0] });
+      }
+
+      case "separado": {
+        // Produto separado (já tirado da prateleira para este envio), antes de conferir/embalar.
+        if (!b.frete || !b.inv) return send(res, 400, { ok: false, error: "frete e inv são obrigatórios." });
+        const sep = !!b.separado;
+        const rows = await sbUpdate("full_envio_itens", `frete=eq.${enc(String(b.frete))}&inv=eq.${enc(String(b.inv))}`,
+          { separado: sep, separado_em: sep ? new Date().toISOString() : null });
+        if (!rows.length) return send(res, 404, { ok: false, error: "Produto não encontrado neste envio." });
+        await registrarLeitura({ frete: b.frete, inv: b.inv, resultado: "separado", detalhe: sep ? "separado" : "separação desfeita" });
+        return send(res, 200, { ok: true, item: rows[0] });
       }
 
       case "alerta": {
