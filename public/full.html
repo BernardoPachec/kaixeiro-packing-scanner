@@ -648,6 +648,27 @@ function filtrosEnvio() {
 }
 function setFiltro(k) { S.itemFiltro = k; renderEnvio(); }
 
+// Busca da Tela 02: nome, Código ML, SKU, EAN/GTIN ou MLB, sem diferença de acento/maiúscula.
+// Soma com o filtro escolhido e vale também para a impressão.
+const semAcento = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+function casaBusca(it, q) {
+  const termos = semAcento(q).split(/\s+/).filter(Boolean);
+  if (!termos.length) return true;
+  const alvo = semAcento([it.titulo, it.inv, it.sku, it.ean, it.item_id, ...(it.gtins || [])].join(" "));
+  return termos.every((t) => alvo.includes(t));
+}
+function listaTela02() {
+  const fl = filtrosEnvio();
+  const atual = fl.todos.find(([k]) => k === S.itemFiltro) || fl.base[0];
+  return { fl, atual, lista: S.itens.filter((i) => atual[2](i) && casaBusca(i, S.buscaItem)) };
+}
+function buscarItem(v) {
+  S.buscaItem = v;
+  const el = $("buscaItem"), pos = el ? el.selectionStart : null;
+  renderEnvio();
+  const novo = $("buscaItem"); novo.focus(); if (pos != null) novo.setSelectionRange(pos, pos);
+}
+
 function renderEnvio() {
   const e = S.envio, F = encodeURIComponent(e.frete);
   crumb([{ t: "Envios", href: "#/" }, { t: "#" + e.frete }]);
@@ -655,8 +676,7 @@ function renderEnvio() {
   const pend = S.itens.filter((i) => i.conferidas < i.unidades);
   const semFoto = S.itens.filter((i) => !i.enriquecido_em).length;
   const fl = filtrosEnvio();
-  const atual = fl.todos.find(([k]) => k === S.itemFiltro) || fl.base[0];
-  const lista = S.itens.filter(atual[2]);
+  const { atual, lista } = listaTela02();
   const chip = ([k, l, fn]) => `<button class="fchip ${atual[0] === k ? "on" : ""}" onclick="setFiltro('${esc(k).replace(/'/g, "\\'")}')">${esc(l)} · ${S.itens.filter(fn).length}</button>`;
   const desp = e.status === "despachado";
   $("view").innerHTML = `
@@ -677,6 +697,8 @@ function renderEnvio() {
       <button class="btn" onclick="openScanner('achar')">${ICON.barcode.replace(/44/g, 20)} Escanear para achar o produto</button>
       <button class="btn ghost" onclick="imprimirEnvio()">Imprimir PDF${atual[0] === "todos" ? "" : " · " + esc(atual[1])}</button>
     </div>
+
+    <div class="search" style="max-width:none">${ICON.search}<input id="buscaItem" value="${esc(S.buscaItem || "")}" placeholder="Buscar produto por nome, Código ML, SKU ou EAN" oninput="buscarItem(this.value)" autocomplete="off">${S.buscaItem ? `<button class="mini" onclick="buscarItem('')">limpar</button>` : ""}</div>
 
     <div class="filtros">
       <span class="lbl">Filtrar</span>${fl.base.map(chip).join("")}
@@ -717,7 +739,7 @@ function renderEnvio() {
           <span class="st" style="color:${sc}">${st}</span>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${Y}" stroke-width="1.5"><path d="m9 18 6-6-6-6"/></svg>
         </div>`;
-      }).join("") : S.itens.length ? `<div class="empty">Nenhum produto em "${esc(atual[1])}". <a href="javascript:setFiltro('todos')">Ver todos</a></div>`
+      }).join("") : S.itens.length ? `<div class="empty">Nenhum produto${S.buscaItem ? ` com "${esc(S.buscaItem)}"` : ""}${atual[0] === "todos" ? "" : ` em "${esc(atual[1])}"`}. <a href="javascript:S.buscaItem='';setFiltro('todos')">Ver todos</a></div>`
         : '<div class="empty">Este envio veio da lista do ML e ainda não tem produtos.<br>Abra o envio no Mercado Livre e clique no botão <b>Enviar ao Scanner</b>, ou importe o PDF do frete.</div>'}
     </div>
 
@@ -748,9 +770,8 @@ async function toggleSeparado(inv) {
 // (no diálogo, "Salvar como PDF" gera o arquivo).
 function imprimirEnvio() {
   const e = S.envio, fl = filtrosEnvio();
-  const atual = fl.todos.find(([k]) => k === S.itemFiltro) || fl.base[0];
-  const lista = S.itens.filter(atual[2]);
-  if (!lista.length) return toast("Nenhum produto neste filtro para imprimir.");
+  const { atual, lista } = listaTela02();
+  if (!lista.length) return toast("Nenhum produto neste filtro/busca para imprimir.");
   const unid = lista.reduce((a, i) => a + i.unidades, 0);
   const agora = new Date().toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
   const linhas = lista.map((it, n) => {
