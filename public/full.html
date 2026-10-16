@@ -1025,8 +1025,8 @@ function evaluate(it) {
     return { ...base, state: "ok", border: "var(--ok)", bg: "var(--okbg)", dot: "var(--ok)", dotFg: "#000", glyph: "✓", titleColor: "var(--ok)", title: modo === "kit" ? "Etiqueta confere" : "Mesmo produto", text: (modo === "kit" ? "Etiqueta do kit certa." : "Produto e etiqueta batem.") + " Siga o checklist abaixo." };
   if (leu)
     return { ...base, state: "half", border: Y, bg: "transparent", dot: Y, dotFg: "#000", glyph: "1", titleColor: Y, title: "Falta uma leitura", text: S.etq ? "Etiqueta lida. Leia o código do produto (ou siga o checklist)." : "Produto lido. Cole a etiqueta do ML e leia a etiqueta (ou siga o checklist)." };
-  return { ...base, state: "idle", border: "var(--line2)", bg: "transparent", dot: "var(--s4)", dotFg: "var(--muted)", glyph: "?", titleColor: "#fff", title: modo === "kit" ? "Kit: confira item por item" : "Leitura opcional",
-    text: modo === "kit" ? "Este anúncio tem mais de um item: marque cada um no checklist. Ler a etiqueta do kit é opcional." : "Leia o produto e a etiqueta para conferir, ou siga direto o checklist." };
+  return { ...base, state: "idle", border: "var(--line2)", bg: "transparent", dot: "var(--s4)", dotFg: "var(--muted)", glyph: "?", titleColor: "#fff", title: modo === "kit" ? "Kit montado: confira item por item" : "Leitura opcional",
+    text: modo === "kit" ? "Kit montado por vocês, sem código de barras próprio: marque cada item no checklist. Ler a etiqueta do kit é opcional." : "Leia o produto e a etiqueta para conferir, ou siga direto o checklist." };
 }
 
 let busy = false;
@@ -1069,9 +1069,13 @@ const EQUIPE = ["Douglas", "Ber", "Wilson", "Cássia", "Giulia"];
 const CONFERIR_ANUNCIO = "Conferi no anúncio o que vai neste pacote";
 const ckEtq = (it) => (S.checklistsEtq || {})[it.inv] || null;
 const passosDe = (it) => { const ck = ckEtq(it); return ck ? ck.passos || [] : [CONFERIR_ANUNCIO]; };
+// Kit (mais de um item no pacote) NÃO quer dizer "sem código de barras": caixa fechada de
+// fábrica (Breeze, Snow Black, pulverizadores, cera com brinde) tem EAN e lê Produto + Etiqueta.
+// Só o kit montado por vocês, sem EAN no PDF nem GTIN no anúncio, fica sem leitura do produto.
+const temCodigoProduto = (it) => !!it.ean || (it.gtins || []).length > 0;
 function modoDe(it) {
   if (/universal/i.test(it.identificacao || "")) return "universal";
-  if (ckEtq(it)?.kit) return "kit";
+  if (ckEtq(it)?.kit && !temCodigoProduto(it)) return "kit";
   return "normal";
 }
 
@@ -1165,7 +1169,7 @@ function editChecklist() {
     <p style="margin:0;font-size:14px;color:#cfcfcf">Itens e passos da etiqueta <b class="mono">${esc(it.inv)}</b>, um por linha. Vale <b>só para este anúncio</b> (outros anúncios com o mesmo SKU têm o checklist deles). Deixe vazio se não precisa de nada.</p>
     <textarea id="ckText" class="minput" style="height:220px;padding:10px;font-family:var(--fb);font-size:16px;line-height:1.5" placeholder="Ex.: 1x Cera Triple Wax 100 g&#10;1x Aplicador de espuma&#10;1x Flanela cinza 30x30">${esc((ck?.passos || []).join("\n"))}</textarea>
     <p style="margin:0;font-size:12px;color:var(--muted)">Salvar com a lista vazia = confirmar que vai <b>só o produto</b>. Fica gravado para os próximos envios deste anúncio.</p>
-    <label style="display:flex;gap:10px;align-items:center;font-size:14px;color:#cfcfcf"><input type="checkbox" id="ckKit" ${ck?.kit ? "checked" : ""} style="width:18px;height:18px;accent-color:var(--y)"> Anúncio com mais de um item (kit): sem leitura do código do produto</label>
+    <label style="display:flex;gap:10px;align-items:center;font-size:14px;color:#cfcfcf"><input type="checkbox" id="ckKit" ${ck?.kit ? "checked" : ""} style="width:18px;height:18px;accent-color:var(--y)"> Anúncio com mais de um item (kit). Se não tiver EAN/código de barras, a tela não pede a leitura do produto.</label>
     <button class="btn" id="ckGo" onclick="saveChecklist()">Salvar e marcar como revisado</button>`;
   show("impModal");
 }
