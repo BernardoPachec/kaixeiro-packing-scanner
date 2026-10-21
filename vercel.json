@@ -3,11 +3,17 @@
   "buildCommand": null,
   "outputDirectory": "public",
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/$1" }
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    }
   ],
   "functions": {
-    "api/ml-webhook.js": { "maxDuration": 30 },
-    "api/questions.js": { "maxDuration": 60 },
-    "api/full.js": { "maxDuration": 60 }
+    "api/ml-webhook.js": {
+      "maxDuration": 30
+    },
+    "api/full.js": {
+      "maxDuration": 60
+    }
   }
 }

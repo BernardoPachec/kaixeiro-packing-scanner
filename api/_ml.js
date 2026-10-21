@@ -139,7 +139,7 @@ async function mlFetchWithToken(path, row) {
   return { status: res.status, data, row };
 }
 
-// Mesma coisa, mas pra chamadas POST (usado por api/answer.js pra enviar resposta de pergunta).
+// Mesma coisa, mas pra chamadas POST.
 async function mlPostWithToken(path, body, row) {
   const doPost = (token) =>
     fetch(`${ML_API}${path}`, {
@@ -197,6 +197,7 @@ async function getShipment(shipmentId) {
   if (it.status === 200 && Array.isArray(it.data)) {
     items = it.data.map((x) => ({
       item_id: x.item_id || x.id || x.item?.id || null,
+      variation_id: x.variation_id || x.item?.variation_id || null,
       title: x.description || x.item?.title || x.title || `Item ${x.item_id || ""}`,
       quantity: x.quantity ?? 1,
       variation: x.variation_attributes
@@ -205,21 +206,36 @@ async function getShipment(shipmentId) {
     }));
   }
 
-  // Foto de cada produto distinto do pedido (a mesma usada no anúncio do ML).
-  // Um item_id só busca a foto uma vez, mesmo que se repita em múltiplas linhas.
+  // Detalhe de cada anúncio distinto do pedido (um GET por item_id): foto, e para a
+  // conferência na bancada o EAN/GTIN, o SKU e a etiqueta Full (inventory_id), que é a chave
+  // do checklist do anúncio. Com variação, vale o que estiver na variação vendida.
   let tokenRow = it.row || s.row;
-  const photoByItemId = {};
+  const detalhes = {};
   const uniqueItemIds = [...new Set(items.map((i) => i.item_id).filter(Boolean))];
   for (const itemId of uniqueItemIds) {
     const detail = await mlFetchWithToken(`/items/${itemId}`, tokenRow);
     tokenRow = detail.row;
-    if (detail.status === 200 && detail.data?.pictures?.length) {
-      photoByItemId[itemId] = detail.data.pictures[0].secure_url;
-    } else if (detail.status === 200 && detail.data?.thumbnail) {
-      photoByItemId[itemId] = detail.data.thumbnail.replace(/^http:/, "https:");
-    }
+    if (detail.status === 200 && detail.data) detalhes[itemId] = detail.data;
   }
-  items = items.map((i) => ({ ...i, foto: i.item_id ? (photoByItemId[i.item_id] || null) : null }));
+  const attr = (attrs, id) => (attrs || []).filter((a) => a.id === id);
+  const gtinsDe = (attrs) => attr(attrs, "GTIN").flatMap((a) =>
+    [...String(a.value_name || "").split(/[,;\s]+/), ...(a.values || []).map((v) => v.name || "")]
+  ).filter((v) => /^\d{8,14}$/.test(v));
+  items = items.map((i) => {
+    const d0 = detalhes[i.item_id];
+    if (!d0) return { ...i, foto: null, gtins: [], sku: null, inventory_id: null, permalink: null };
+    const v = (d0.variations || []).find((x) => String(x.id) === String(i.variation_id)) || null;
+    const skuAttr = (attrs) => attr(attrs, "SELLER_SKU")[0]?.value_name || null;
+    const foto = d0.pictures?.[0]?.secure_url || (d0.thumbnail || "").replace(/^http:/, "https:") || null;
+    return {
+      ...i,
+      foto,
+      gtins: [...new Set([...gtinsDe(v?.attributes), ...gtinsDe(d0.attributes)])],
+      sku: skuAttr(v?.attributes) || v?.seller_custom_field || d0.seller_custom_field || skuAttr(d0.attributes),
+      inventory_id: v?.inventory_id || d0.inventory_id || null,
+      permalink: d0.permalink || null,
+    };
+  });
 
   const logistic = d.logistic_type || d.mode;
   const addr = d.receiver_address || {};

@@ -59,3 +59,18 @@ alter table ml_tokens        enable row level security;
 alter table packing_orders   enable row level security;
 alter table notified_orders  enable row level security;
 alter table question_drafts  enable row level security;
+
+-- 6) Conferência da bancada Flex/Agência (21/10/2026): cada pedido embalado, com quem
+--    embalou, o que foi bipado e o checklist marcado. Escanear a etiqueta de novo avisa
+--    "JÁ EMBALADO". (A tabela question_drafts acima ficou sem uso: a aba Perguntas saiu.)
+create table if not exists flex_embalagens (
+  id           bigserial primary key,
+  shipment_id  text not null,
+  order_id     text,
+  tipo         text,             -- Flex | Agência / Ponto de coleta
+  responsavel  text not null,    -- "Douglas, Ber"
+  itens        jsonb,            -- [{item_id, titulo, quantidade, bipados, codigos, sem_codigo, passos}]
+  criado_em    timestamptz default now()
+);
+create index if not exists idx_flex_emb_ship on flex_embalagens(shipment_id, criado_em desc);
+alter table flex_embalagens enable row level security;

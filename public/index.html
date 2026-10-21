@@ -37,7 +37,7 @@
   header{position:sticky;top:0;z-index:10;background:#000000ee;backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:14px 16px}
   .brand-logo{height:46px;width:auto;display:block}
   main{padding:16px;padding-bottom:110px;max-width:640px;margin:0 auto}
-  .hidden{display:none}
+  .hidden{display:none !important}
 
   /* Barra de abas flutuante estilo iOS: fixa embaixo, translúcida com blur, só ícones */
   .tabbar{
@@ -92,37 +92,6 @@
   .empty{color:var(--muted);font-size:13px;font-style:italic;padding:6px 2px}
   .refresh{color:var(--accent);background:none;border:none;font-weight:700;cursor:pointer;font-size:14px}
 
-  /* Perguntas */
-  .qcard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px;transition:opacity .3s ease}
-  .qcard .card-row{align-items:flex-start;margin-bottom:10px}
-  .qcard .p{font-weight:600;font-size:14px;margin:0 0 2px;color:var(--muted)}
-  .qcard .texto{font-size:16px;font-weight:600;line-height:1.4;margin:0 0 10px}
-  .qcard .data{color:var(--muted);font-size:12px;margin-bottom:10px}
-  .qcard a.abrir{display:inline-block;color:#000;background:var(--accent);font-weight:700;font-size:13px;padding:8px 14px;border-radius:10px;text-decoration:none}
-  .qcard textarea.rascunho{
-    width:100%;min-height:84px;background:var(--card2);border:1px solid var(--line);
-    border-radius:12px;color:var(--txt);font-family:inherit;font-size:14px;line-height:1.4;
-    padding:10px;resize:vertical;display:block;
-  }
-  .qcard textarea.rascunho::placeholder{color:var(--muted);font-style:italic}
-  .qcard .acoes{display:flex;gap:8px;margin-top:10px}
-  .qcard .btn-enviar{flex:1;padding:12px;font-size:14px;border-radius:12px}
-  .qcard .btn-regenerar{
-    background:none;border:1px solid var(--line);color:var(--muted);border-radius:12px;
-    padding:0 14px;font-size:16px;cursor:pointer;font-family:inherit;
-  }
-  .qcard.enviada{opacity:.5}
-  .aviso-removido{
-    background:rgba(220,38,38,.12);border:1px solid rgba(220,38,38,.4);color:#ff9d9d;
-    border-radius:10px;padding:8px 10px;font-size:13px;line-height:1.4;margin-bottom:10px;
-  }
-  .qcard.qcard-respondida{opacity:.85}
-  .qcard.qcard-respondida .resposta-enviada{
-    background:var(--card2);border-radius:12px;padding:10px;font-size:14px;line-height:1.4;
-    border-left:3px solid var(--accent);margin-top:6px;
-  }
-  .secao-titulo{color:var(--muted);font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin:22px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
-
   /* Página de resultado */
   #tab-result{padding:16px;max-width:640px;margin:0 auto}
   .fotos-row{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin:4px 0 16px}
@@ -130,6 +99,49 @@
   .qty-alert{background:var(--danger);color:#fff;font-weight:900;font-size:17px;text-align:center;padding:16px;border-radius:14px;letter-spacing:.3px;margin-bottom:14px;animation:pulse 1s ease-in-out infinite}
   @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,.55)}50%{box-shadow:0 0 0 12px rgba(220,38,38,0)}}
   .btn-rescan{margin-top:18px;font-size:17px;padding:16px}
+
+  /* Conferência do pedido Flex/Agência (mesma base do Scanner Full) */
+  .ja-embalado{background:var(--danger);color:#fff;font-weight:900;font-size:22px;text-align:center;padding:16px;border-radius:14px;margin-bottom:14px;letter-spacing:.5px}
+  .ja-embalado span{font-weight:600;font-size:15px}
+  .pedido-prod{margin-top:16px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px}
+  .pedido-prod.pronto{border-color:#3ecf6e}
+  .foto-prod{width:84px;height:84px;border-radius:14px;object-fit:contain;background:#fff;flex-shrink:0;border:1px solid var(--line)}
+  .qtd-grande{flex:none;background:var(--accent);color:#000;font-weight:900;font-size:30px;border-radius:14px;padding:6px 12px;text-align:center;line-height:1}
+  .qtd-grande small{display:block;font-size:11px;font-weight:700}
+  .bip{margin-top:14px;border:1px solid var(--line);border-radius:14px;padding:12px}
+  .bip.ok{border-color:#3ecf6e;background:rgba(62,207,110,.08)}
+  .bip-top{display:flex;justify-content:space-between;font-size:16px}
+  .bip.ok .bip-top{color:#3ecf6e}
+  .barra{height:6px;background:#222;border-radius:4px;margin-top:8px;overflow:hidden}
+  .barra i{display:block;height:100%;background:var(--accent)}
+  .bip.ok .barra i{background:#3ecf6e}
+  .check{margin-top:14px}
+  .lbl{color:var(--muted);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+  .check-item{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:#000;border:1px solid var(--line);color:#fff;padding:14px;border-radius:14px;font-weight:700;font-size:20px;line-height:1.25;font-family:inherit;margin-top:8px;cursor:pointer}
+  .check-item .box{flex:none;width:34px;height:34px;border:2px solid var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:24px;color:#000}
+  .check-item.on{border-color:#3ecf6e;background:rgba(62,207,110,.1);color:#3ecf6e}
+  .check-item.on .box{background:#3ecf6e;border-color:#3ecf6e}
+  .btn-big{margin-top:18px;font-size:19px;padding:18px;font-weight:800}
+  .ean-erro{margin-top:16px;background:#3a1420;border:1px solid #7f2436;color:#ffd5dd;border-radius:14px;padding:14px;font-size:15px}
+  .link{color:var(--accent);font-weight:700;font-size:14px;text-decoration:none}
+  .mini{color:rgba(255,255,255,.4);font-size:12px;text-decoration:underline}
+  .modal{position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.9);display:flex;align-items:center;justify-content:center;padding:14px}
+  .mbox{width:100%;max-width:460px;max-height:calc(100vh - 28px);overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:18px}
+  .mhead{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--line);font-weight:800}
+  .mhead button{background:none;border:0;color:var(--muted);font-size:26px;cursor:pointer;line-height:1}
+  .mbody{padding:16px;display:flex;flex-direction:column;gap:12px}
+  .minput{width:100%;height:50px;background:#000;border:1px solid var(--line);border-radius:12px;color:#fff;padding:0 12px;font-size:16px;font-family:inherit;outline:0}
+  .minput:focus{border-color:var(--accent)}
+  .eancam{min-height:200px;background:#111}
+  .eancam video{width:100% !important;display:block}
+  .ean-status{font-size:15px;line-height:1.5;border-radius:12px;padding:10px 12px;background:var(--card2)}
+  .ean-status.ok{color:#3ecf6e}
+  .ean-status.erro{background:#3a1420;color:#ffd5dd}
+  .quem-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .quem-grid button{height:60px;background:#000;border:1px solid var(--line);border-radius:14px;color:#fff;font-weight:800;font-size:19px;font-family:inherit;cursor:pointer}
+  .quem-grid button.last{border-color:var(--accent)}
+  .quem-grid button.on{background:var(--accent);border-color:var(--accent);color:#000}
+  .toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:40;background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:12px 18px;font-size:14px;max-width:calc(100vw - 32px)}
 </style>
 </head>
 <body>
@@ -138,7 +150,7 @@
 </header>
 
 <main>
-  <!-- SCANNER -->
+  <!-- SCANNER (QR da etiqueta Flex / Agência) -->
   <section id="tab-scan">
     <div id="reader"></div>
     <p class="scan-hint" id="scanHint">Aponte a câmera para o QR da etiqueta.</p>
@@ -146,93 +158,117 @@
     <div id="result"></div>
   </section>
 
-  <!-- PERGUNTAS -->
-  <section id="tab-questions" class="hidden">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin:14px 0 12px">
-      <span style="color:var(--muted);font-size:14px" id="questionsCount">—</span>
-      <button class="refresh" onclick="loadQuestions()">↻ Atualizar</button>
-    </div>
-    <div id="questionsList"></div>
-
-    <div class="secao-titulo" id="answeredCount">Respondidas</div>
-    <div id="answeredList"></div>
-  </section>
-
-  <!-- FULL -->
-  <section id="tab-full" class="hidden">
-    <div class="empty"><a href="full.html" style="color:var(--accent)">Abrir o Scanner Full →</a></div>
-  </section>
-
-  <!-- RESULTADO (tela cheia após escanear) -->
+  <!-- RESULTADO + CONFERÊNCIA (tela cheia após escanear) -->
   <section id="tab-result" class="hidden">
     <div id="resultContent"></div>
-    <button class="btn btn-primary btn-rescan" onclick="voltarParaScanner()">📷 Escanear novamente</button>
+    <button class="btn btn-ghost btn-rescan" onclick="voltarParaScanner()">📷 Escanear outra etiqueta</button>
   </section>
 </main>
 
 <nav class="tabbar" id="mainTabs">
-  <button class="active" data-tab="scan" onclick="showTab('scan')" title="Escanear" aria-label="Escanear">📷</button>
-  <button data-tab="questions" onclick="showTab('questions')" title="Perguntas" aria-label="Perguntas">❓</button>
+  <button class="active" data-tab="scan" onclick="showTab('scan')" title="Bancada Flex / Agência" aria-label="Bancada Flex / Agência">📷</button>
   <button data-tab="full" onclick="location.href='full.html'" title="Scanner Full" aria-label="Scanner Full">🏬</button>
 </nav>
 
+<!-- Bipar produtos (EAN/SKU) do pedido -->
+<div class="modal hidden" id="eanModal">
+  <div class="mbox">
+    <div class="mhead"><span>Bipar produtos</span><button onclick="fecharEan()" aria-label="Fechar">×</button></div>
+    <div id="eanCam" class="eancam"></div>
+    <div class="mbody">
+      <div id="eanStatus" class="ean-status"></div>
+      <form style="display:flex;gap:8px" onsubmit="event.preventDefault();lerManual()">
+        <input id="eanManual" class="minput" placeholder="Ou digite / use o leitor USB" autocomplete="off" inputmode="numeric">
+        <button class="btn btn-primary" style="width:auto;padding:0 18px" type="submit">Ler</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Quem embalou (várias pessoas) -->
+<div class="modal hidden" id="quemModal">
+  <div class="mbox">
+    <div class="mhead"><span>Quem embalou?</span><button onclick="esconder('quemModal')" aria-label="Fechar">×</button></div>
+    <div class="mbody">
+      <span class="lbl">Pode marcar mais de um</span>
+      <div class="quem-grid" id="quemGrid"></div>
+      <form style="display:flex;gap:8px" onsubmit="event.preventDefault();addOutro()">
+        <input class="minput" id="quemOutro" placeholder="Outro: digite o nome">
+        <button class="btn btn-ghost" style="width:auto;padding:0 18px" type="submit">+ Outro</button>
+      </form>
+      <button class="btn btn-primary btn-big" id="quemGo" onclick="confirmarQuem()" disabled>Escolha quem embalou</button>
+    </div>
+  </div>
+</div>
+
+<!-- Alterar checklist do anúncio -->
+<div class="modal hidden" id="ckModal">
+  <div class="mbox">
+    <div class="mhead"><span>Alterar checklist</span><button onclick="esconder('ckModal')" aria-label="Fechar">×</button></div>
+    <div class="mbody" id="ckBody"></div>
+  </div>
+</div>
+
+<div class="toast hidden" id="toast"></div>
+
 <script>
 const API = ""; // mesma origem (Vercel)
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+const mostrar = (id) => $(id).classList.remove("hidden");
+const esconder = (id) => $(id).classList.add("hidden");
+function toast(msg, ms = 2600) { const t = $("toast"); t.textContent = msg; mostrar("toast"); clearTimeout(toast._t); toast._t = setTimeout(() => esconder("toast"), ms); }
+let actx;
+function beep(ok) {
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.frequency.value = ok ? 1250 : 220; o.type = ok ? "sine" : "square";
+    g.gain.value = 0.08; o.connect(g); g.connect(actx.destination);
+    o.start(); o.stop(actx.currentTime + (ok ? 0.12 : 0.35));
+  } catch {}
+  if (navigator.vibrate) navigator.vibrate(ok ? 60 : [120, 60, 120]);
+}
 
 function showTab(t){
   document.querySelectorAll("#mainTabs button").forEach(x=>x.classList.toggle("active",x.dataset.tab===t));
-  document.getElementById("tab-scan").classList.toggle("hidden",t!=="scan");
-  document.getElementById("tab-questions").classList.toggle("hidden",t!=="questions");
-  document.getElementById("tab-full").classList.toggle("hidden",t!=="full");
-  document.getElementById("tab-result").classList.add("hidden");
+  $("tab-scan").classList.toggle("hidden",t!=="scan");
+  $("tab-result").classList.add("hidden");
   document.querySelector("header").classList.remove("hidden");
-  document.getElementById("mainTabs").classList.remove("hidden");
-  if(t==="questions") loadQuestions();
+  $("mainTabs").classList.remove("hidden");
 }
-
 function showResultView(){
   document.querySelector("header").classList.add("hidden");
-  document.getElementById("mainTabs").classList.add("hidden");
-  document.getElementById("tab-scan").classList.add("hidden");
-  document.getElementById("tab-questions").classList.add("hidden");
-  document.getElementById("tab-full").classList.add("hidden");
-  document.getElementById("tab-result").classList.remove("hidden");
+  $("mainTabs").classList.add("hidden");
+  $("tab-scan").classList.add("hidden");
+  $("tab-result").classList.remove("hidden");
+  window.scrollTo(0, 0);
 }
-
 function voltarParaScanner(){
+  P = null;
   showTab("scan");
   startScanner();
 }
 
-// ---------- Scanner ----------
+// ---------- Scanner do QR da etiqueta ----------
 let html5Qr=null, scanning=false, lastCode=null, lastAt=0;
 
 async function startScanner(){
   if(scanning) return;
-  document.getElementById("startBtn").style.display="none";
-  html5Qr = new Html5Qrcode("reader");
+  $("startBtn").style.display="none";
+  html5Qr = html5Qr || new Html5Qrcode("reader");
   scanning=true;
   try{
-    await html5Qr.start(
-      {facingMode:"environment"},
-      {fps:10, qrbox:{width:240,height:240}},
-      onScan,
-      ()=>{}
-    );
+    await html5Qr.start({facingMode:"environment"},{fps:10, qrbox:{width:240,height:240}},onScan,()=>{});
   }catch(e){
-    document.getElementById("scanHint").innerHTML="Não consegui abrir a câmera. Verifique a permissão do navegador. ("+e+")";
+    $("scanHint").innerHTML="Não consegui abrir a câmera. Verifique a permissão do navegador. ("+esc(e)+")";
     scanning=false;
-    document.getElementById("startBtn").style.display="block";
+    $("startBtn").style.display="block";
   }
 }
-
 async function stopScanner(){
-  if(html5Qr && scanning){
-    try{ await html5Qr.stop(); }catch(e){}
-    scanning=false;
-  }
+  if(html5Qr && scanning){ try{ await html5Qr.stop(); }catch(e){} scanning=false; }
 }
-
 function onScan(text){
   const now=Date.now();
   if(text===lastCode && now-lastAt<3000) return; // debounce do mesmo QR
@@ -242,184 +278,282 @@ function onScan(text){
 }
 
 async function lookup(qr){
-  const box=document.getElementById("result");
+  const box=$("result");
   box.innerHTML='<div class="result">Consultando…</div>';
   try{
     const r=await fetch(API+"/api/lookup?qr="+encodeURIComponent(qr));
     const d=await r.json();
-    if(!d.ok){ box.innerHTML='<div class="result err">⚠️ '+(d.error||"Erro")+'</div>'; return; }
+    if(!d.ok){ box.innerHTML='<div class="result err">⚠️ '+esc(d.error||"Erro")+'</div>'; return; }
     box.innerHTML="";
     await stopScanner();
-    renderResult(d);
+    abrirPedido(d);
     showResultView();
   }catch(e){
-    box.innerHTML='<div class="result err">Falha de conexão: '+e.message+'</div>';
+    box.innerHTML='<div class="result err">Falha de conexão: '+esc(e.message)+'</div>';
   }
 }
 
 function badgeClass(tipo){
   if(tipo && tipo.startsWith("Flex")) return "Flex";
   if(tipo && tipo.startsWith("Agência")) return "Agência";
-  if(tipo==="Full") return "Full";
   return "Full";
 }
 
-function renderResult(d){
-  const it=d.itens && d.itens[0] || {};
-  const extra=(d.itens||[]).slice(1).map(x=>`<div class="row"><span>${x.title}</span><span class="qtd">×${x.quantity}</span></div>`).join("");
-  const totalQtd=(d.itens||[]).reduce((s,x)=>s+(x.quantity||0),0) || (it.quantity||0);
-  const alerta=totalQtd>1
-    ? `<div class="qty-alert">⚠️ ATENÇÃO: ${totalQtd} UNIDADES NESTE PEDIDO ⚠️</div>`
-    : "";
-  const fotos=(d.itens||[]).filter(x=>x.foto).map(x=>
-    `<img class="foto-produto" src="${x.foto}" alt="${(x.title||"").replace(/"/g,"")}">`
-  ).join("");
-  document.getElementById("resultContent").innerHTML=`
-    ${alerta}
-    ${fotos?`<div class="fotos-row">${fotos}</div>`:""}
-    <div class="result">
-      <span class="badge ${badgeClass(d.tipo)}">${d.tipo}</span>
-      <div class="prod">${it.title || "(produto não identificado)"}</div>
-      <span class="qtd">Qtd: ${it.quantity ?? "?"}</span>
-      ${it.variation?`<div class="meta" style="color:var(--muted);margin-top:6px">${it.variation}</div>`:""}
-      ${extra}
-      <div class="row"><span class="k">Destinatário</span><span>${d.destinatario||"—"}</span></div>
-      <div class="row"><span class="k">Endereço</span><span>${d.endereco||"—"}</span></div>
-      <div class="row"><span class="k">Bairro</span><span>${d.bairro||"—"}</span></div>
-      <div class="row"><span class="k">Complemento</span><span>${d.complemento||"—"}</span></div>
-      <div class="row"><span class="k">Envio</span><span>#${d.shipment_id}</span></div>
-    </div>`;
+// ---------- Conferência do pedido (mesma base do Scanner Full) ----------
+// Cada produto do pedido: bipar o código de barras de CADA unidade (EAN do anúncio/variação
+// ou o SKU) e marcar o checklist do anúncio (o mesmo do Scanner Full). O botão "Marcar como
+// embalado" só libera com tudo bipado e marcado; depois escolhe quem embalou.
+const EQUIPE = ["Douglas", "Ber", "Wilson", "Cássia", "Giulia"];
+const CONFERIR_ANUNCIO = "Conferi no anúncio o que vai neste pacote";
+let P = null; // pedido aberto
+
+const norm = (s) => String(s || "").trim().toUpperCase().replace(/\s+/g, "");
+const digits = (s) => s.replace(/^0+/, "");
+function casaProduto(it, raw) {
+  const c = norm(raw);
+  if (!c) return false;
+  if (/^\d+$/.test(c)) return (it.gtins || []).some((g) => digits(norm(g)) === digits(c));
+  return !!it.sku && norm(it.sku) === c;
+}
+const temCodigo = (it) => (it.gtins || []).length > 0 || !!it.sku;
+const passosDe = (it) => it.checklist ? (it.checklist.passos || []) : [CONFERIR_ANUNCIO];
+
+function abrirPedido(d) {
+  P = { d, lidos: d.itens.map(() => []), semCodigo: d.itens.map(() => false), feitos: d.itens.map(() => new Set()), erro: null };
+  renderPedido();
 }
 
-// ---------- Perguntas ----------
-function renderAnswered(list){
-  const wrap=document.getElementById("answeredList");
-  document.getElementById("answeredCount").textContent="Respondidas ("+list.length+")";
-  if(!list.length){ wrap.innerHTML='<div class="empty">Nenhuma pergunta respondida ainda.</div>'; return; }
-  wrap.innerHTML=list.map(q=>{
-    const data=q.data?new Date(q.data).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}):"";
-    const dataResp=q.respondida_em?new Date(q.respondida_em).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}):"";
-    return `
-      <div class="qcard qcard-respondida">
-        <div class="card-row">
-          ${q.foto?`<img class="card-foto" src="${q.foto}" alt="">`:'<div class="card-foto card-foto-empty"></div>'}
-          <div class="card-info">
-            <p class="p">${q.produto||"Produto"}</p>
-          </div>
-        </div>
-        <div class="texto">${q.texto||""}</div>
-        <div class="data">Perguntado ${data}</div>
-        <div class="resposta-enviada">${q.resposta||"(sem texto salvo)"}</div>
-        <div class="data" style="margin-top:6px">Respondido ${dataResp}</div>
-        ${q.permalink?`<a class="abrir" style="margin-top:8px" href="${q.permalink}" target="_blank" rel="noopener">Abrir no Mercado Livre ↗</a>`:""}
-      </div>`;
-  }).join("");
+function itemPronto(k) {
+  const it = P.d.itens[k];
+  const bipou = P.semCodigo[k] || P.lidos[k].length >= (it.quantity || 1);
+  return bipou && passosDe(it).every((_, j) => P.feitos[k].has(j));
 }
 
-async function loadQuestions(){
-  const wrap=document.getElementById("questionsList");
-  wrap.innerHTML='<div class="empty">Carregando… (a 1ª vez pode demorar alguns segundos pra gerar os rascunhos)</div>';
-  try{
-    const r=await fetch(API+"/api/questions");
-    const d=await r.json();
-    if(!d.ok){ wrap.innerHTML='<div class="empty">Erro: '+d.error+'</div>'; return; }
-    const questions=d.pendentes||[];
-    document.getElementById("questionsCount").textContent=questions.length+" pergunta(s) sem resposta";
-    renderAnswered(d.respondidas||[]);
-    if(!questions.length){ wrap.innerHTML='<div class="empty">Nenhuma pergunta pendente 🎉</div>'; return; }
-    wrap.innerHTML=questions.map(q=>{
-      const data=q.data?new Date(q.data).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}):"";
-      const placeholder=q.rascunho?"":"Não consegui gerar o rascunho automático — escreva a resposta aqui.";
-      const attrs=[
-        `data-qid="${q.question_id}"`,
-        `data-item="${q.item_id||''}"`,
-        `data-produto="${(q.produto||'').replace(/"/g,'&quot;')}"`,
-        `data-pergunta="${(q.texto||'').replace(/"/g,'&quot;')}"`,
-      ].join(" ");
-      return `
-        <div class="qcard" ${attrs}>
-          <div class="card-row">
-            ${q.foto?`<img class="card-foto" src="${q.foto}" alt="">`:'<div class="card-foto card-foto-empty"></div>'}
-            <div class="card-info">
-              <p class="p">${q.produto||"Produto"}</p>
-            </div>
-          </div>
-          <div class="texto">${q.texto||""}</div>
-          <div class="data">${data}</div>
-          ${q.anuncio_removido?'<div class="aviso-removido">⚠️ O anúncio dessa pergunta foi removido do Mercado Livre — não é possível responder (o próprio ML bloqueia).</div>':""}
-          <textarea class="rascunho" placeholder="${placeholder}" ${q.anuncio_removido?"disabled":""}>${q.rascunho||""}</textarea>
-          <div class="acoes">
-            ${q.anuncio_removido
-              ?'<button class="btn btn-primary btn-enviar" disabled style="opacity:.4;cursor:not-allowed">Não é possível enviar</button>'
-              :`<button class="btn btn-primary btn-enviar" onclick="enviarResposta(${q.question_id})">Enviar resposta</button>`}
-            <button class="btn-regenerar" onclick="regenerarRascunho(${q.question_id})" title="Gerar outro rascunho">↻</button>
-          </div>
-          ${q.permalink?`<a class="abrir" style="margin-top:8px" href="${q.permalink}" target="_blank" rel="noopener">Abrir no Mercado Livre ↗</a>`:""}
-        </div>`;
-    }).join("");
-  }catch(e){ wrap.innerHTML='<div class="empty">Falha: '+e.message+'</div>'; }
+function renderPedido() {
+  const d = P.d;
+  const totalQtd = d.itens.reduce((s, x) => s + (x.quantity || 0), 0);
+  const tudo = d.itens.every((_, k) => itemPronto(k));
+  const emb = d.embalagem;
+  const quando = emb ? new Date(emb.criado_em).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "";
+  $("resultContent").innerHTML = `
+    ${emb ? `<div class="ja-embalado">⛔ JÁ EMBALADO<br><span>por ${esc(emb.responsavel)} em ${quando}</span></div>` : ""}
+    ${totalQtd > 1 ? `<div class="qty-alert">⚠️ ATENÇÃO: ${totalQtd} UNIDADES NESTE PEDIDO ⚠️</div>` : ""}
+    <div class="result" style="margin-top:0">
+      <span class="badge ${badgeClass(d.tipo)}">${esc(d.tipo)}</span>
+      <div class="row" style="border-top:0;margin-top:10px"><span class="k">Destinatário</span><span>${esc(d.destinatario || "—")}</span></div>
+      <div class="row"><span class="k">Endereço</span><span>${esc(d.endereco || "—")}</span></div>
+      <div class="row"><span class="k">Bairro</span><span>${esc(d.bairro || "—")}</span></div>
+      <div class="row"><span class="k">Complemento</span><span>${esc(d.complemento || "—")}</span></div>
+      <div class="row"><span class="k">Envio</span><span>#${esc(d.shipment_id)}</span></div>
+    </div>
+
+    ${d.itens.map((it, k) => produtoHtml(it, k)).join("")}
+
+    ${P.erro ? `<div class="ean-erro">${P.erro}</div>` : ""}
+
+    <button class="btn btn-ghost btn-big" onclick="abrirEan()">📷 Bipar produtos</button>
+    <button class="btn btn-primary btn-big" style="margin-top:12px" ${tudo ? "" : "disabled"} onclick="marcarEmbalado()">${emb ? "Já embalado · marcar de novo" : "Marcar como embalado"}</button>
+    ${tudo ? "" : `<p class="scan-hint">Bipe todas as unidades e marque o checklist de cada produto para liberar.</p>`}`;
 }
 
-async function enviarResposta(qid){
-  const card=document.querySelector(`.qcard[data-qid="${qid}"]`);
-  if(!card) return;
-  const textarea=card.querySelector(".rascunho");
-  const texto=textarea.value.trim();
-  if(!texto){ alert("Escreva (ou espere gerar) a resposta antes de enviar."); return; }
-  if(!confirm("Enviar essa resposta pro cliente no Mercado Livre?")) return;
-  const btn=card.querySelector(".btn-enviar");
-  const original=btn.textContent;
-  btn.disabled=true; btn.textContent="Enviando…";
-  try{
-    const r=await fetch(API+"/api/answer",{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({question_id:qid, texto})
-    });
-    const d=await r.json();
-    if(!d.ok){ alert("Erro ao enviar: "+(d.error||"falha desconhecida")); btn.disabled=false; btn.textContent=original; return; }
-    card.classList.add("enviada");
-    textarea.disabled=true;
-    btn.textContent="Enviada ✓";
-    setTimeout(()=>{ loadQuestions(); },1000);
-  }catch(e){
-    alert("Falha de conexão: "+e.message);
-    btn.disabled=false; btn.textContent=original;
+function produtoHtml(it, k) {
+  const qtd = it.quantity || 1, lidos = P.lidos[k].length, ok = P.semCodigo[k] || lidos >= qtd;
+  const passos = passosDe(it), ck = it.checklist;
+  const titulo = !ck ? "Sem checklist cadastrado" : !passos.length ? "Produto simples" : "O que vai no pacote";
+  return `
+  <div class="pedido-prod ${itemPronto(k) ? "pronto" : ""}">
+    <div class="card-row" style="align-items:flex-start">
+      ${it.foto ? `<img class="foto-prod" src="${esc(it.foto)}" alt="">` : '<div class="foto-prod card-foto-empty"></div>'}
+      <div class="card-info">
+        <div class="prod" style="margin:0 0 4px;font-size:19px">${esc(it.title || "(produto não identificado)")}</div>
+        ${it.variation ? `<div class="meta">${esc(it.variation)}</div>` : ""}
+        <div class="meta">SKU ${esc(it.sku || "—")} · EAN ${esc((it.gtins || []).join(", ") || "—")}</div>
+      </div>
+      <span class="qtd-grande">${qtd}<small>un.</small></span>
+    </div>
+
+    <div class="bip ${ok ? "ok" : ""}">
+      ${temCodigo(it) ? `
+        <div class="bip-top"><b>${P.semCodigo[k] ? "Conferido no olho" : `Bipado ${Math.min(lidos, qtd)} de ${qtd}`}</b><span>${ok ? "✓" : ""}</span></div>
+        <div class="barra"><i style="width:${Math.min(100, Math.round((P.semCodigo[k] ? qtd : lidos) / qtd * 100))}%"></i></div>`
+      : `
+        <div class="bip-top"><b>${P.semCodigo[k] ? "Conferido no olho ✓" : "Anúncio sem código de barras cadastrado"}</b></div>
+        ${P.semCodigo[k] ? "" : `<button class="btn btn-ghost" style="margin-top:8px" onclick="semCodigo(${k})">Conferi no olho as ${qtd} un.</button>`}`}
+    </div>
+
+    <div class="check">
+      <div class="lbl" style="margin-bottom:8px">${titulo}</div>
+      ${!ck ? `<p style="margin:0 0 10px;font-size:15px;line-height:1.4"><b style="color:var(--accent)">Não tenho informação sobre o checklist deste anúncio.</b> Abra o anúncio e confira o que vai junto antes de embalar.</p>
+        ${it.permalink ? `<a class="link" href="${esc(it.permalink)}" target="_blank" rel="noopener">Ver anúncio ${esc(it.item_id || "")} ↗</a>` : ""}` : ""}
+      ${ck && !ck.revisado && passos.length ? `<p class="meta" style="color:var(--accent);margin:0 0 8px">Montado a partir da descrição do anúncio: confira.</p>` : ""}
+      ${passos.length ? passos.map((p, j) => `
+        <button class="check-item ${P.feitos[k].has(j) ? "on" : ""}" onclick="togglePasso(${k},${j})">
+          <span class="box">${P.feitos[k].has(j) ? "✓" : ""}</span><span>${esc(p)}</span>
+        </button>`).join("") : `<p style="margin:0;font-size:15px">Vai <b>só o produto</b> (cadastrado por vocês). <b style="color:var(--accent)">Não colocar</b> flanela, aplicador nem outro item.</p>`}
+      <div style="text-align:right;margin-top:6px"><a class="mini" href="javascript:editChecklist(${k})">alterar checklist</a></div>
+    </div>
+  </div>`;
+}
+
+function togglePasso(k, j) {
+  const s = P.feitos[k]; s.has(j) ? s.delete(j) : s.add(j);
+  const y = window.scrollY; renderPedido(); window.scrollTo(0, y);
+}
+function semCodigo(k) {
+  const it = P.d.itens[k];
+  if (!confirm(`Este anúncio não tem código de barras cadastrado. Confirma que conferiu pelo nome/foto as ${it.quantity || 1} unidade(s)?`)) return;
+  P.semCodigo[k] = true; renderPedido();
+}
+
+// Uma leitura vale para o produto do pedido cujo código bate e que ainda tem unidade a bipar.
+function registrarLeitura(raw) {
+  const code = norm(raw);
+  if (!code || !P) return;
+  const ks = P.d.itens.map((it, k) => k).filter((k) => casaProduto(P.d.itens[k], code));
+  if (!ks.length) {
+    beep(false);
+    P.erro = `❌ Código <b>${esc(code)}</b> não é de nenhum produto deste pedido. Separe essa unidade.`;
+    statusEan(P.erro, true);
+    return renderPedido();
+  }
+  const k = ks.find((x) => P.lidos[x].length < (P.d.itens[x].quantity || 1));
+  if (k == null) {
+    beep(false);
+    const it = P.d.itens[ks[0]];
+    P.erro = `❌ Já bipou as ${it.quantity || 1} unidade(s) de <b>${esc(it.title)}</b>. Essa é a mais: NÃO coloque no pacote.`;
+    statusEan(P.erro, true);
+    return renderPedido();
+  }
+  P.lidos[k].push(code); P.erro = null; beep(true);
+  const it = P.d.itens[k];
+  statusEan(`✓ ${esc(it.title)} · ${P.lidos[k].length} de ${it.quantity || 1}`, false);
+  renderPedido();
+  if (P.d.itens.every((x, i) => !temCodigo(x) || P.semCodigo[i] || P.lidos[i].length >= (x.quantity || 1))) setTimeout(fecharEan, 600);
+}
+
+// ---------- Câmera para EAN ----------
+let eanCam = null, eanOn = false, eanLast = "", eanAt = 0;
+function statusEan(html, erro) { const s = $("eanStatus"); if (s) { s.innerHTML = html; s.className = "ean-status " + (erro ? "erro" : "ok"); } }
+async function abrirEan() {
+  const falta = P.d.itens.map((it, k) => temCodigo(it) && !P.semCodigo[k] ? `${esc(it.title)}: ${P.lidos[k].length}/${it.quantity || 1}` : null).filter(Boolean);
+  statusEan(falta.length ? "Bipe o código de barras de cada unidade.<br>" + falta.join("<br>") : "Nenhum produto com código para bipar.", false);
+  $("eanManual").value = "";
+  mostrar("eanModal");
+  setTimeout(() => $("eanManual").focus({ preventScroll: true }), 50);
+  if (eanOn) return;
+  try {
+    const F = Html5QrcodeSupportedFormats;
+    eanCam = eanCam || new Html5Qrcode("eanCam", { verbose: false,
+      formatsToSupport: [F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E, F.CODE_128, F.CODE_39, F.ITF],
+      experimentalFeatures: { useBarCodeDetectorIfSupported: true } });
+    eanOn = true;
+    await eanCam.start({ facingMode: "environment" },
+      { fps: 12, qrbox: (w, h) => ({ width: Math.floor(w * 0.85), height: Math.floor(Math.min(h * 0.5, 160)) }) },
+      (t) => { const n = Date.now(); if (t === eanLast && n - eanAt < 1500) return; eanLast = t; eanAt = n; registrarLeitura(t); }, () => {});
+  } catch (e) {
+    eanOn = false;
+    statusEan("Câmera indisponível: digite o código ou use o leitor USB.", true);
   }
 }
+async function fecharEan() {
+  esconder("eanModal");
+  if (eanCam && eanOn) { try { await eanCam.stop(); } catch {} eanOn = false; }
+}
+function lerManual() { const v = $("eanManual").value.trim(); $("eanManual").value = ""; if (v) registrarLeitura(v); }
 
-async function regenerarRascunho(qid){
-  const card=document.querySelector(`.qcard[data-qid="${qid}"]`);
-  if(!card) return;
-  const textarea=card.querySelector(".rascunho");
-  const btn=card.querySelector(".btn-regenerar");
-  btn.disabled=true; const original=btn.textContent; btn.textContent="…";
-  try{
-    const r=await fetch(API+"/api/questions",{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({
-        question_id:qid,
-        item_id:card.dataset.item,
-        produto:card.dataset.produto,
-        pergunta:card.dataset.pergunta,
-      })
-    });
-    const d=await r.json();
-    if(!d.ok){ alert("Erro ao gerar novo rascunho: "+(d.error||"")); }
-    else{ textarea.value=d.rascunho||""; }
-  }catch(e){ alert("Falha de conexão: "+e.message); }
-  btn.disabled=false; btn.textContent=original;
+// Leitor USB/Bluetooth com o pedido aberto e o modal fechado: digita rápido e dá Enter.
+let kb = "", kbAt = 0;
+document.addEventListener("keydown", (ev) => {
+  if (!P || $("tab-result").classList.contains("hidden")) return;
+  if (/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || "")) return;
+  const now = Date.now();
+  if (now - kbAt > 80) kb = "";
+  kbAt = now;
+  if (ev.key === "Enter") { const c = kb; kb = ""; if (c.length >= 4) registrarLeitura(c); return; }
+  if (ev.key.length === 1) kb += ev.key;
+});
+
+// ---------- Marcar como embalado + quem embalou ----------
+function marcarEmbalado() {
+  if (P.d.embalagem && !confirm("Este pedido JÁ FOI EMBALADO. Marcar de novo mesmo assim?")) return;
+  S.quemSel = new Set();
+  let ultimos = [], outros = [];
+  try { ultimos = JSON.parse(localStorage.getItem("kxflex.quem.ultimos") || "[]"); outros = JSON.parse(localStorage.getItem("kxflex.outros") || "[]"); } catch {}
+  S.quemLista = [...EQUIPE, ...outros.filter((n) => !EQUIPE.includes(n))];
+  S.quemUltimos = ultimos;
+  $("quemOutro").value = "";
+  renderQuem(); mostrar("quemModal");
+}
+const S = {};
+function renderQuem() {
+  $("quemGrid").innerHTML = S.quemLista.map((n, k) =>
+    `<button class="${S.quemSel.has(n) ? "on" : S.quemUltimos.includes(n) ? "last" : ""}" onclick="toggleQuem(${k})">${S.quemSel.has(n) ? "✓ " : ""}${esc(n)}</button>`).join("");
+  const nomes = [...S.quemSel];
+  $("quemGo").disabled = !nomes.length;
+  $("quemGo").textContent = nomes.length ? `Confirmar · ${nomes.join(", ")}` : "Escolha quem embalou";
+}
+function toggleQuem(k) { const n = S.quemLista[k]; S.quemSel.has(n) ? S.quemSel.delete(n) : S.quemSel.add(n); renderQuem(); }
+function addOutro() {
+  const n = $("quemOutro").value.trim().replace(/\s+/g, " ");
+  if (!n) return toast("Digite o nome em \"Outro\".");
+  if (!S.quemLista.includes(n)) S.quemLista.push(n);
+  S.quemSel.add(n); $("quemOutro").value = ""; renderQuem();
+}
+async function confirmarQuem() {
+  const nomes = [...S.quemSel]; if (!nomes.length) return;
+  try {
+    localStorage.setItem("kxflex.quem.ultimos", JSON.stringify(nomes));
+    const outros = nomes.filter((n) => !EQUIPE.includes(n));
+    const antigos = JSON.parse(localStorage.getItem("kxflex.outros") || "[]");
+    localStorage.setItem("kxflex.outros", JSON.stringify([...new Set([...outros, ...antigos])].slice(0, 6)));
+  } catch {}
+  const btn = $("quemGo"); btn.disabled = true; btn.textContent = "Salvando…";
+  const d = P.d;
+  try {
+    const r = await fetch(API + "/api/flex", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
+      acao: "embalar", shipment_id: d.shipment_id, order_id: d.order_id, tipo: d.tipo, responsavel: nomes.join(", "),
+      itens: d.itens.map((it, k) => ({ item_id: it.item_id, titulo: it.title, quantidade: it.quantity, bipados: P.lidos[k].length,
+        codigos: P.lidos[k], sem_codigo: P.semCodigo[k], passos: passosDe(it).filter((_, j) => P.feitos[k].has(j)) })),
+    }) });
+    const res = await r.json();
+    if (!res.ok) throw new Error(res.error || "Falha ao salvar");
+    esconder("quemModal");
+    beep(true);
+    toast(`Pedido #${d.shipment_id} embalado por ${nomes.join(", ")}.`, 3000);
+    voltarParaScanner();
+  } catch (e) { toast("Não salvou: " + e.message, 5000); renderQuem(); }
+}
+
+// ---------- Alterar checklist (o mesmo do Scanner Full, por anúncio) ----------
+function editChecklist(k) {
+  const it = P.d.itens[k];
+  $("ckBody").innerHTML = `
+    <p style="margin:0;font-size:14px;color:var(--muted)">O que vai no pacote de <b style="color:#fff">${esc(it.title)}</b>, um item por linha. Vale para este anúncio aqui e no Scanner Full. Lista vazia = vai só o produto.</p>
+    <textarea id="ckText" class="minput" style="height:180px;padding:10px;font-size:16px;line-height:1.5" placeholder="Ex.: 1x Cera 100 g&#10;1x Aplicador de espuma&#10;1x Flanela cinza 30x30">${esc((it.checklist?.passos || []).join("\n"))}</textarea>
+    <button class="btn btn-primary" id="ckGo" onclick="salvarChecklist(${k})">Salvar checklist</button>`;
+  mostrar("ckModal");
+}
+async function salvarChecklist(k) {
+  const it = P.d.itens[k], btn = $("ckGo");
+  btn.disabled = true; btn.textContent = "Salvando…";
+  const passos = $("ckText").value.split("\n").map((s) => s.trim()).filter(Boolean);
+  const qtd = (p) => (p.match(/^(\d+)x\s/) || [])[1];
+  const itens = passos.filter(qtd);
+  const kit = itens.length > 1 || itens.some((p) => Number(qtd(p)) > 1);
+  try {
+    const r = await fetch(API + "/api/full", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
+      acao: "checklist", inv: it.checklist_chave, item_id: it.item_id, sku: it.sku, titulo: it.title, kit, passos }) });
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error || "Falha");
+    it.checklist = d.checklist; P.feitos[k] = new Set();
+    esconder("ckModal"); renderPedido(); toast("Checklist salvo para este anúncio.");
+  } catch (e) { btn.disabled = false; btn.textContent = "Tentar de novo"; toast(e.message, 5000); }
 }
 
 // ---------- Início automático ----------
 // Ao abrir o app (ou via ícone da tela inicial / QR da bancada), já liga a câmera.
-// No iPhone o Safari pode exigir 1 toque no botão "Ativar câmera" na 1ª vez — nas
-// próximas, como a permissão já foi dada, costuma ligar direto.
 window.addEventListener("load", () => {
-  if (!document.getElementById("tab-scan").classList.contains("hidden")) {
-    startScanner();
-  }
+  if (!$("tab-scan").classList.contains("hidden")) startScanner();
 });
 </script>
 </body>

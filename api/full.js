@@ -335,7 +335,8 @@ module.exports = async (req, res) => {
           kit: !!c.kit,
           revisado: !!c.revisado,
           atualizado_em: new Date().toISOString(),
-        })).filter((c) => /^[A-Z]{4}\d{5}$/.test(c.inv || ""));
+        // Chave: etiqueta Full (inventory_id) ou, para anúncio que não vai ao Full, o MLB.
+        })).filter((c) => /^([A-Z]{4}\d{5}|MLB\d{6,})$/.test(c.inv || ""));
         if (!rows.length) return send(res, 400, { ok: false, error: "Código ML (inv) inválido." });
         await sbUpsert("full_checklists_etq", rows, "inv");
         return send(res, 200, { ok: true, gravados: rows.length, checklist: rows[0] });

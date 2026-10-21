@@ -82,9 +82,6 @@ disso vira deploy automático.
 2. Toque em **Ativar câmera** e permita o acesso.
 3. Aponte para o QR da etiqueta → produto, quantidade, tipo e destinatário aparecem.
 4. Aba **Painel**: acompanhe e mova cada pedido (A fazer → Etiqueta impressa → Enviado).
-5. Aba **Perguntas**: lista as perguntas não respondidas dos anúncios (só leitura por
-   enquanto — responder ainda é feito no app do ML; rascunho automático é o próximo passo,
-   ver `ROADMAP-Auto-Perguntas-ML.md`).
    Dica: "Adicionar à tela inicial" transforma o site num ícone de app.
 
 ---
@@ -104,7 +101,6 @@ packing-scanner/
 │   ├── _ml.js        núcleo: token ML (Supabase) + chamadas à API + normalização
 │   ├── lookup.js     GET /api/lookup?qr=... → dados do envio + registra no painel
 │   ├── board.js      GET/POST /api/board → lista e atualiza status
-│   ├── questions.js  GET /api/questions → perguntas não respondidas dos anúncios no ML
 │   └── ml-webhook.js POST recebido do ML → avisa venda Flex/Agência no WhatsApp
 ├── public/
 │   ├── index.html    app (Scanner + Painel)
@@ -135,3 +131,15 @@ Página `public/full.html`, aberta pela aba 🏬. Fluxo: **importar o PDF do fre
 - **Leitor USB/Bluetooth** funciona sem abrir a câmera (ele "digita" o código e dá Enter).
 - **Banco:** rode uma vez `supabase-full.sql` no SQL Editor do Supabase (cria `full_envios`,
   `full_envio_itens`, `full_leituras` e a função `full_conferir`).
+
+## Bancada Flex / Agência — conferência do pedido (aba 📷)
+
+Depois de ler o QR da etiqueta, cada produto do pedido mostra:
+- **Bipar produtos**: o código de barras (EAN do anúncio/variação, ou o SKU) de **cada unidade**.
+  Código de outro produto ou unidade a mais aparece em vermelho.
+- **O que vai no pacote**: o mesmo checklist do Scanner Full (por anúncio; anúncio fora do Full
+  usa o MLB como chave). Sem cadastro: "Não tenho informação sobre o checklist".
+- **Marcar como embalado** só libera com tudo bipado e marcado; depois "Quem embalou?" (várias
+  pessoas). Fica gravado em `flex_embalagens`; ler a mesma etiqueta de novo mostra **JÁ EMBALADO**.
+
+A aba Perguntas foi removida em 21/10/2026 (a tabela `question_drafts` ficou sem uso no banco).
