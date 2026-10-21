@@ -143,3 +143,12 @@ Depois de ler o QR da etiqueta, cada produto do pedido mostra:
   pessoas). Fica gravado em `flex_embalagens`; ler a mesma etiqueta de novo mostra **JÁ EMBALADO**.
 
 A aba Perguntas foi removida em 21/10/2026 (a tabela `question_drafts` ficou sem uso no banco).
+
+## Mapa do estoque (aba 🗺️, `public/mapa.html`)
+
+Planta geral (frente + Salas 1, 2 e 3) → toque numa sala para entrar (zoom) → prateleiras grandes
+e pequenas (Sala 1) ou 4 prateleiras de parede + 8 pallets (Salas 2 e 3). Em cada local:
+"+ Adicionar produto aqui" (lista dos anúncios do ML agrupados por SKU, com foto e marca, ou texto
+livre), quantidade digitada e observação; tocar no produto muda quantidade, move de local ou tira.
+Busca no topo por nome, marca, SKU ou local. Tabelas `estoque_locais` e `catalogo_produtos`
+(catálogo refeito pela API do ML a cada 24 h). Layout vindo do protótipo do Claude Design.

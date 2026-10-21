@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<meta name="theme-color" content="#000000" />
+<title>Kaixeiro · Mapa do estoque</title>
+<link rel="manifest" href="manifest.json" />
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
+<link rel="icon" type="image/png" href="icon-192.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* Layout do protótipo "Mapa do estoque" (Claude Design) com o visual Kaixeiro:
+     preto, amarelo #F3AA07 e branco, Barlow, cantos retos, igual ao Scanner Full. */
+  :root{
+    --bg:#000; --s1:#0A0A0A; --s2:#111; --s3:#161616; --s4:#1A1A1A;
+    --line:#262626; --line2:#333; --muted:#9a9a9a; --dim:#6b6b6b;
+    --y:#F3AA07; --y2:#FFD04A; --ytint:rgba(243,170,7,.18);
+    --fh:"Barlow Condensed",system-ui,sans-serif; --fb:"Barlow",system-ui,sans-serif;
+    --mono:ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;background:var(--bg);color:#fff;font-family:var(--fb);font-size:15px;line-height:1.45}
+  button{font-family:inherit;cursor:pointer}
+  button:focus-visible,input:focus-visible{outline:2px solid var(--y);outline-offset:2px}
+  .hidden{display:none !important}
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .lbl{font:500 12px var(--fh);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  .mono{font-family:var(--mono)}
+
+  .topbar{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,600px) minmax(0,1fr);align-items:center;gap:16px;padding:12px 24px;background:#000;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+  .brand{display:flex;align-items:center;gap:12px}
+  .brand .ico{width:40px;height:40px;border:1px solid var(--y);display:flex;align-items:center;justify-content:center}
+  .brand b{display:block;font:600 18px/1 var(--fh);letter-spacing:.06em;text-transform:uppercase}
+  .brand span{font:500 11px var(--fh);letter-spacing:.2em;text-transform:uppercase;color:var(--y)}
+  .busca{position:relative}
+  .busca .box{display:flex;align-items:center;gap:10px;height:50px;padding:0 8px 0 16px;border:2px solid var(--y);background:#000}
+  .busca input{flex:1;min-width:0;border:0;outline:none;background:transparent;font:16px var(--fb);color:#fff;height:44px}
+  .busca input::placeholder{color:var(--dim)}
+  .limpar{width:36px;height:36px;border:0;background:var(--s4);display:flex;align-items:center;justify-content:center}
+  .drop{position:absolute;left:0;right:0;top:58px;background:var(--s1);border:1px solid var(--line2);box-shadow:0 12px 32px rgba(0,0,0,.6);max-height:420px;overflow-y:auto}
+  .res{width:100%;display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center;text-align:left;padding:10px 14px;border:0;border-bottom:1px solid var(--line);background:var(--s1);color:#fff;min-height:56px}
+  .res:hover{background:var(--s3)}
+  .res .t{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .res .m{font-size:12px;color:var(--muted)}
+  .loc{font:600 12px var(--mono);background:var(--y);color:#000;padding:4px 8px;white-space:nowrap}
+  .mini-foto{width:44px;height:44px;background:#fff center/contain no-repeat;border:1px solid var(--line2)}
+  .mini-foto.ph{background:var(--s4)}
+  .topright{display:flex;justify-content:flex-end}
+  .topright a{font:500 13px var(--fh);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line2);padding:7px 12px;text-decoration:none}
+
+  main{flex:1;width:100%;max-width:1240px;margin:0 auto;padding:20px 24px 120px;display:flex;flex-direction:column;gap:16px}
+  .crumb{display:flex;align-items:center;flex-wrap:wrap;gap:10px;min-height:44px}
+  .crumb h1{margin:0;font:600 28px/1 var(--fh);text-transform:uppercase;letter-spacing:.02em}
+  .crumb .hint{font-size:14px;color:var(--muted)}
+  .voltar{display:flex;align-items:center;gap:8px;height:44px;padding:0 16px 0 12px;border:1px solid var(--line2);background:#000;color:#fff;font:500 14px var(--fh);letter-spacing:.1em;text-transform:uppercase}
+  .resumo{margin-left:auto;font-size:13px;font-weight:600;background:var(--ytint);color:var(--y);border:1px solid #5a4210;padding:6px 12px}
+
+  /* Planta geral */
+  .stage-wrap{position:relative;width:100%;aspect-ratio:1225/650;overflow:hidden;background:var(--s1);border:1px solid var(--line)}
+  .stage{position:absolute;inset:4%;transform-origin:50% 50%;transition:transform 720ms cubic-bezier(.65,0,.35,1)}
+  .predio{position:absolute;inset:0;border:4px solid #fff;background:#000}
+  .frente{position:absolute;left:0;top:0;width:100%;height:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:var(--s2);border:4px solid #fff;border-bottom-width:2px;transition:opacity .5s}
+  .frente b{font:600 20px var(--fh);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .frente span{font-size:13px;color:var(--dim)}
+  .sala{position:absolute;border:2px solid #fff;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:8px;color:#fff;transition:background-color .25s,opacity .5s}
+  .sala:hover{background:var(--s3)}
+  .sala b{font:700 26px/1 var(--fh);letter-spacing:.06em;text-transform:uppercase}
+  .sala small{font-size:12px;color:var(--muted)}
+  .sala.match{background:var(--ytint)}
+  .sala.zoom{background:var(--s3)}
+  .badge{font-size:12px;font-weight:700;background:var(--y);color:#000;padding:4px 10px}
+  .cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+  .card{display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;padding:16px 18px;min-height:72px;background:var(--s1);border:1px solid var(--line);color:#fff}
+  .card:hover{border-color:var(--y)}
+  .card b{display:block;font:600 20px var(--fh);letter-spacing:.06em;text-transform:uppercase}
+  .card small{font-size:13px;color:var(--muted)}
+
+  /* Dentro da sala */
+  .enter{animation:enter .45s ease-out both}
+  @keyframes enter{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:none}}
+  .sala-view{display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start}
+  .planta{flex:999 1 560px;min-width:0;background:var(--s1);border:1px solid var(--line);padding:24px;display:flex;flex-direction:column;align-items:center;gap:18px}
+  .piso{position:relative;width:100%;border:4px solid #fff;background:#000}
+  .pallets-area{position:absolute;border:1.5px dashed var(--dim);display:flex;align-items:flex-end;justify-content:center;padding-bottom:6px}
+  .pallets-area span{font-size:11px;color:var(--muted)}
+  .shelf{position:absolute;border:2px solid #fff;background:var(--s4);color:#fff;display:flex;align-items:center;justify-content:center;gap:4px 8px;padding:2px;overflow:hidden;transition:background-color .2s,transform .15s}
+  .shelf:hover{transform:scale(1.04);z-index:2}
+  .shelf.pequena{background:#23272b;border-color:#bfc6cc}
+  .shelf.pallet{background:#1d1912;border:2px dashed #a8865a}
+  .shelf.match{background:var(--y);border:2px solid var(--y);color:#000}
+  .shelf.sel{background:#fff;border:2px solid #fff;color:#000}
+  .shelf .c{font:600 16px var(--mono)}
+  .shelf .n{font-size:11px;font-weight:600;white-space:nowrap}
+  .legenda{display:flex;flex-wrap:wrap;justify-content:center;gap:16px;font-size:12px;color:var(--muted)}
+  .legenda span{display:flex;align-items:center;gap:6px}
+  .legenda i{width:16px;height:16px;border:2px solid #fff;background:var(--s4);display:inline-block}
+  .painel{flex:1 1 320px;min-width:0;background:var(--s1);border:1px solid var(--line);padding:20px;display:flex;flex-direction:column;gap:14px}
+  .painel h2{margin:0;font:600 24px/1.1 var(--fh);text-transform:uppercase;letter-spacing:.04em}
+  .lista{display:flex;flex-direction:column;border:1px solid var(--line)}
+  .row{display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:10px;align-items:center;text-align:left;padding:10px 14px;min-height:52px;border:0;border-bottom:1px solid var(--line);background:var(--s1);color:#fff}
+  .row:hover{background:var(--s3)}
+  .chip{font:600 14px var(--mono);text-align:center;padding:4px 0;background:var(--s4);border:1px solid var(--line2)}
+  .chip.match{background:var(--y);color:#000;border-color:var(--y)}
+  .prod{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 12px;border:0;border-bottom:1px solid var(--line);background:var(--s1);color:#fff;text-align:left;width:100%}
+  .prod:hover{background:var(--s3)}
+  .prod.foco{background:var(--ytint)}
+  .prod .t{font-size:14px;font-weight:600;line-height:1.25}
+  .prod .m{font-size:12px;color:var(--muted)}
+  .qtd{font:600 15px var(--mono);white-space:nowrap}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:46px;padding:0 18px;border:1px solid var(--y);background:var(--y);color:#000;font:600 15px var(--fh);letter-spacing:.1em;text-transform:uppercase}
+  .btn:hover{background:var(--y2)}
+  .btn.ghost{background:transparent;color:var(--y)}
+  .btn.quiet{background:transparent;color:var(--muted);border-color:var(--line2)}
+  .btn:disabled{opacity:.45;cursor:default}
+  .x{width:44px;height:44px;border:1px solid var(--line2);background:#000;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .vazio{padding:16px 14px;font-size:13px;color:var(--muted)}
+
+  .modal{position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.9);display:flex;align-items:center;justify-content:center;padding:14px}
+  .mbox{width:100%;max-width:520px;max-height:calc(100vh - 28px);overflow:auto;background:var(--s1);border:1px solid var(--line2)}
+  .mhead{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--line);font:600 16px var(--fh);letter-spacing:.12em;text-transform:uppercase}
+  .mhead button{background:none;border:0;color:var(--muted);font-size:26px;line-height:1}
+  .mbody{padding:16px;display:flex;flex-direction:column;gap:12px}
+  .minput{width:100%;height:46px;background:#000;border:1px solid var(--line2);color:#fff;padding:0 12px;font:16px var(--fb);outline:0}
+  .minput:focus{border-color:var(--y)}
+  .cat{max-height:300px;overflow:auto;border:1px solid var(--line)}
+  .cat .prod.on{background:var(--ytint);box-shadow:inset 3px 0 0 var(--y)}
+  .toast{position:fixed;left:50%;bottom:100px;transform:translateX(-50%);z-index:40;background:var(--s4);border:1px solid var(--line2);padding:12px 18px;font-size:14px;max-width:calc(100vw - 32px)}
+
+  /* Barra de abas (igual à da bancada) */
+  .tabbar{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:20;display:flex;gap:4px;background:rgba(24,24,24,.6);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border:1px solid rgba(255,255,255,.14);padding:7px;border-radius:26px;box-shadow:0 8px 28px rgba(0,0,0,.45)}
+  .tabbar a{color:rgba(255,255,255,.55);font-size:22px;line-height:1;width:50px;height:50px;border-radius:19px;display:flex;align-items:center;justify-content:center;text-decoration:none}
+  .tabbar a.active{background:var(--y);color:#000}
+
+  @media (max-width:760px){
+    .topbar{grid-template-columns:minmax(0,1fr);padding:10px 16px}
+    .brand,.topright{display:none}
+    .cards{grid-template-columns:minmax(0,1fr)}
+    main{padding:16px 16px 120px}
+    .sala b{font-size:18px}
+    .planta{padding:14px}
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="ico"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F3AA07" stroke-width="2" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18"></rect><path d="M3 12h18M9 12v9M15 12v9"></path></svg></div>
+    <div><b>Mapa do estoque</b><span>Kaixeiro</span></div>
+  </div>
+  <div class="busca">
+    <label for="busca" class="sr">Buscar produto, marca ou código</label>
+    <div class="box">
+      <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F3AA07" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg>
+      <input id="busca" type="search" autocomplete="off" placeholder="Buscar produto, marca ou código…"
+        oninput="onBusca(this.value)" onfocus="M.focado=true;renderDrop()" onblur="setTimeout(()=>{M.focado=false;renderDrop()},150)" onkeydown="teclaBusca(event)">
+      <button type="button" class="limpar hidden" id="limpar" aria-label="Limpar busca" onclick="limparBusca()">
+        <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+      </button>
+    </div>
+    <div class="drop hidden" id="drop"></div>
+  </div>
+  <div class="topright"><a href="index.html">← Bancada</a></div>
+</header>
+
+<main id="main"></main>
+
+<nav class="tabbar" aria-label="Abas">
+  <a href="index.html" title="Bancada Flex / Agência" aria-label="Bancada Flex / Agência">📷</a>
+  <a href="mapa.html" class="active" title="Mapa do estoque" aria-label="Mapa do estoque">🗺️</a>
+  <a href="full.html" title="Scanner Full" aria-label="Scanner Full">🏬</a>
+</nav>
+
+<!-- Adicionar / editar produto num local -->
+<div class="modal hidden" id="modal">
+  <div class="mbox">
+    <div class="mhead"><span id="mTitulo">Adicionar produto</span><button onclick="fecharModal()" aria-label="Fechar">×</button></div>
+    <div class="mbody" id="mBody"></div>
+  </div>
+</div>
+
+<div class="toast hidden" id="toast"></div>
+
+<script>
+// ---------- Planta (do protótipo) ----------
+// Posição das salas na planta geral (% do prédio) e o desenho de cada sala (coordenadas dos
+// rascunhos do Bernardo). Sala 1: prateleiras grandes e pequenas. Salas 2 e 3: 4 prateleiras
+// grandes nas paredes e pallets no chão.
+const PLAN = {
+  sala1: { x: 66.6667, y: 50, w: 33.3333, h: 50 },
+  sala2: { x: 33.3333, y: 50, w: 33.3334, h: 50 },
+  sala3: { x: 0, y: 50, w: 33.3333, h: 50 },
+};
+function salaDeParede(id, nome) {
+  return {
+    id, nome, W: 470, H: 680, maxW: 400,
+    palletArea: { x: 155, y: 70, w: 165, h: 530 },
+    locais: [
+      { code: "A", kind: "grande", x: 61, y: 62, w: 83, h: 242 },
+      { code: "B", kind: "grande", x: 57, y: 329, w: 88, h: 255 },
+      { code: "C", kind: "grande", x: 350, y: 67, w: 83, h: 237 },
+      { code: "D", kind: "grande", x: 348, y: 320, w: 84, h: 248 },
+      { code: "PL1", kind: "pallet", x: 165, y: 85, w: 65, h: 100 },
+      { code: "PL2", kind: "pallet", x: 245, y: 85, w: 65, h: 100 },
+      { code: "PL3", kind: "pallet", x: 165, y: 200, w: 65, h: 100 },
+      { code: "PL4", kind: "pallet", x: 245, y: 200, w: 65, h: 100 },
+      { code: "PL5", kind: "pallet", x: 165, y: 315, w: 65, h: 100 },
+      { code: "PL6", kind: "pallet", x: 245, y: 315, w: 65, h: 100 },
+      { code: "PL7", kind: "pallet", x: 165, y: 430, w: 65, h: 100 },
+      { code: "PL8", kind: "pallet", x: 245, y: 430, w: 65, h: 100 },
+    ],
+  };
+}
+const SALAS = {
+  sala1: {
+    id: "sala1", nome: "Sala 1", W: 720, H: 650, maxW: 600, palletArea: null,
+    locais: [
+      { code: "A", kind: "pequena", x: 60, y: 12, w: 84, h: 80 },
+      { code: "B", kind: "grande", x: 61, y: 115, w: 82, h: 236 },
+      { code: "C", kind: "grande", x: 61, y: 373, w: 84, h: 253 },
+      { code: "D", kind: "grande", x: 180, y: 546, w: 279, h: 76 },
+      { code: "E", kind: "pequena", x: 290, y: 100, w: 186, h: 39 },
+      { code: "F", kind: "grande", x: 291, y: 151, w: 88, h: 269 },
+      { code: "G", kind: "grande", x: 390, y: 151, w: 84, h: 266 },
+      { code: "H", kind: "grande", x: 585, y: 111, w: 84, h: 301 },
+      { code: "I", kind: "pequena", x: 585, y: 435, w: 82, h: 134 },
+    ],
+  },
+  sala2: salaDeParede("sala2", "Sala 2"),
+  sala3: salaDeParede("sala3", "Sala 3"),
+};
+const KIND = { grande: "Prateleira grande", pequena: "Prateleira pequena", pallet: "Pallet" };
+
+// ---------- utilidades ----------
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+const semAcento = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+const plural = (n, um, varios) => (n === 1 ? "1 " + um : n + " " + varios);
+const pct = (v, t) => Math.round((v / t) * 10000) / 100;
+const nomeLocal = (kind, code) => (kind === "pallet" ? "Pallet " + code : "Prateleira " + code);
+const localDe = (p) => SALAS[p.sala]?.locais.find((l) => l.code === p.local);
+const fmtQtd = (q) => (q == null ? "—" : q.toLocaleString("pt-BR") + " un.");
+function toast(msg, ms = 2600) { const t = $("toast"); t.textContent = msg; t.classList.remove("hidden"); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.add("hidden"), ms); }
+async function api(body) {
+  const r = await fetch("/api/mapa" + (body ? "" : ""), body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : undefined);
+  const d = await r.json().catch(() => ({ ok: false, error: "Resposta inválida (" + r.status + ")" }));
+  if (!d.ok) throw new Error(d.error || "Erro " + r.status);
+  return d;
+}
+async function apiGet(qs) {
+  const r = await fetch("/api/mapa" + (qs || ""));
+  const d = await r.json().catch(() => ({ ok: false, error: "Resposta inválida (" + r.status + ")" }));
+  if (!d.ok) throw new Error(d.error || "Erro " + r.status);
+  return d;
+}
+
+// ---------- estado ----------
+const M = { view: "overview", zoomTo: null, busca: "", focado: false, local: null, foco: null, itens: [], catalogo: null };
+
+function resultados() {
+  const q = semAcento(M.busca);
+  if (!q) return [];
+  const termos = q.split(/\s+/);
+  return M.itens.filter((p) => {
+    const l = localDe(p);
+    const alvo = semAcento([p.titulo, p.marca, p.sku, SALAS[p.sala]?.nome, l && nomeLocal(l.kind, l.code), p.obs].join(" "));
+    return termos.every((t) => alvo.includes(t));
+  });
+}
+const contar = (lista, sala, local) => lista.filter((p) => p.sala === sala && (local == null || p.local === local)).length;
+const achados = (n) => (n === 1 ? "1 encontrado" : n + " encontrados");
+
+// ---------- navegação (zoom como no protótipo) ----------
+let timers = [];
+const depois = (fn, ms) => timers.push(setTimeout(fn, ms));
+function entrar(id, manterLocal) {
+  if (!manterLocal) { M.local = null; M.foco = null; }
+  M.zoomTo = id; render();
+  depois(() => { M.view = id; render(); window.scrollTo(0, 0); }, 740);
+}
+function voltar() {
+  const id = M.view;
+  M.view = "overview"; M.zoomTo = id; M.local = null; M.foco = null; render();
+  depois(() => { M.zoomTo = null; render(); }, 60);
+}
+function irPara(p) {
+  M.local = p.sala + ":" + p.local; M.foco = p.id; M.focado = false;
+  $("busca").blur(); renderDrop();
+  if (M.view === p.sala) return render();
+  if (M.view !== "overview") { M.view = "overview"; M.zoomTo = null; render(); return depois(() => entrar(p.sala, true), 120); }
+  entrar(p.sala, true);
+}
+
+// ---------- busca ----------
+function onBusca(v) { M.busca = v; M.focado = true; $("limpar").classList.toggle("hidden", !v); renderDrop(); render(); }
+function limparBusca() { $("busca").value = ""; onBusca(""); M.foco = null; render(); }
+function teclaBusca(e) {
+  if (e.key === "Enter") { const r = resultados(); if (r[0]) irPara(r[0]); }
+  if (e.key === "Escape") { M.focado = false; renderDrop(); }
+}
+function renderDrop() {
+  const drop = $("drop"), r = resultados();
+  if (!M.busca || !M.focado) return drop.classList.add("hidden");
+  drop.classList.remove("hidden");
+  drop.innerHTML = r.slice(0, 8).map((p, k) => {
+    const l = localDe(p);
+    return `<button type="button" class="res" onmousedown="event.preventDefault();irPara(resultados()[${k}])">
+      ${p.foto ? `<span class="mini-foto" style="background-image:url('${esc(p.foto)}')"></span>` : '<span class="mini-foto ph"></span>'}
+      <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span class="t">${esc(p.titulo)}</span><span class="m">${esc([p.marca, p.sku, fmtQtd(p.quantidade)].filter(Boolean).join(" · "))}</span></span>
+      <span class="loc">${esc(SALAS[p.sala].nome)} · ${esc(l ? l.code : p.local)}</span>
+    </button>`;
+  }).join("")
+    + (r.length ? "" : `<div class="vazio">Nada encontrado para “${esc(M.busca)}”.</div>`)
+    + (r.length > 8 ? `<div class="vazio">+${r.length - 8} resultados — refine a busca</div>` : "");
+}
+
+// ---------- telas ----------
+function render() {
+  const r = resultados(), temBusca = !!M.busca.trim(), dentro = M.view !== "overview";
+  const resumo = temBusca ? `<span class="resumo">${plural(r.length, "resultado", "resultados")} para “${esc(M.busca)}”</span>` : "";
+  const crumb = dentro
+    ? `<button type="button" class="voltar" onclick="voltar()"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg>Planta geral</button>
+       <span style="color:var(--dim)">/</span><h1>${esc(SALAS[M.view].nome)}</h1>${resumo}`
+    : `<h1>Planta geral</h1><span class="hint">Toque em uma sala para entrar</span>${resumo}`;
+  $("main").innerHTML = `<nav class="crumb" aria-label="Navegação do mapa">${crumb}</nav>` + (dentro ? salaHtml(r) : plantaHtml(r));
+}
+
+function plantaHtml(r) {
+  let transform = "translate(0%, 0%) scale(1)";
+  if (M.zoomTo) {
+    const p = PLAN[M.zoomTo];
+    const sc = (0.9 * Math.min(100 / p.w, 100 / p.h)) / 0.92;
+    transform = `translate(${-sc * (p.x + p.w / 2 - 50)}%, ${-sc * (p.y + p.h / 2 - 50)}%) scale(${sc})`;
+  }
+  const salas = ["sala3", "sala2", "sala1"].map((id) => {
+    const s = SALAS[id], p = PLAN[id], m = contar(r, id);
+    const cls = M.zoomTo === id ? "zoom" : m ? "match" : "";
+    return `<button type="button" class="sala ${cls}" onclick="entrar('${id}')" aria-label="Entrar na ${s.nome}"
+      style="left:${p.x}%;top:${p.y}%;width:${p.w}%;height:${p.h}%;opacity:${M.zoomTo && M.zoomTo !== id ? ".25" : "1"}">
+      <b>${s.nome}</b><small>${s.locais.length} locais · ${plural(contar(M.itens, id), "produto", "produtos")}</small>
+      ${m ? `<span class="badge">${achados(m)}</span>` : ""}
+    </button>`;
+  }).join("");
+  const cards = ["sala1", "sala2", "sala3"].map((id) => {
+    const s = SALAS[id], m = contar(r, id);
+    const prat = s.locais.filter((l) => l.kind !== "pallet").length, pal = s.locais.length - prat;
+    return `<button type="button" class="card" onclick="entrar('${id}')">
+      <span><b>${s.nome}</b><small>${plural(prat, "prateleira", "prateleiras")}${pal ? " · " + plural(pal, "pallet", "pallets") : ""} · ${plural(contar(M.itens, id), "produto", "produtos")}</small></span>
+      ${m ? `<span class="badge">${achados(m)}</span>` : ""}
+      <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F3AA07" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+    </button>`;
+  }).join("");
+  return `<div class="stage-wrap"><div class="stage" style="transform:${transform}">
+      <div class="predio"></div>
+      <div class="frente" style="opacity:${M.zoomTo ? ".25" : "1"}"><b>Espaço da frente</b><span>área livre</span></div>
+      ${salas}
+    </div></div>
+    <div class="cards">${cards}</div>`;
+}
+
+function salaHtml(r) {
+  const s = SALAS[M.view];
+  const area = s.palletArea ? `<div class="pallets-area" style="left:${pct(s.palletArea.x, s.W)}%;top:${pct(s.palletArea.y, s.H)}%;width:${pct(s.palletArea.w, s.W)}%;height:${pct(s.palletArea.h, s.H)}%"><span>pallets no chão</span></div>` : "";
+  const shelves = s.locais.map((l) => {
+    const id = s.id + ":" + l.code, n = contar(M.itens, s.id, l.code), m = contar(r, s.id, l.code);
+    const cls = [l.kind, m ? "match" : "", M.local === id ? "sel" : ""].join(" ");
+    return `<button type="button" class="shelf ${cls}" onclick="abrirLocal('${id}')" aria-label="${nomeLocal(l.kind, l.code)}, ${plural(n, "produto", "produtos")}"
+      style="left:${pct(l.x, s.W)}%;top:${pct(l.y, s.H)}%;width:${pct(l.w, s.W)}%;height:${pct(l.h, s.H)}%;flex-direction:${l.w > l.h ? "row" : "column"}">
+      <span class="c">${l.code}</span><span class="n">${n || "–"}</span></button>`;
+  }).join("");
+  const legenda = `<div class="legenda">
+    <span><i></i>Prateleira grande</span>
+    ${s.locais.some((l) => l.kind === "pequena") ? '<span><i style="background:#23272b;border-color:#bfc6cc"></i>Prateleira pequena</span>' : ""}
+    ${s.palletArea ? '<span><i style="background:#1d1912;border:2px dashed #a8865a"></i>Pallet</span>' : ""}
+    <span><i style="background:var(--y);border-color:var(--y)"></i>Encontrado na busca</span>
+    <span><i style="background:#fff"></i>Selecionado</span></div>`;
+  return `<div class="sala-view enter">
+    <section class="planta" aria-label="Planta da sala">
+      <div class="piso" style="max-width:${s.maxW}px;aspect-ratio:${s.W} / ${s.H}">${area}${shelves}</div>
+      ${legenda}
+    </section>
+    <aside class="painel">${M.local && M.local.startsWith(s.id + ":") ? painelLocal(s, r) : painelSala(s, r)}</aside>
+  </div>`;
+}
+
+function painelLocal(s, r) {
+  const code = M.local.split(":")[1], l = s.locais.find((x) => x.code === code);
+  const itens = M.itens.filter((p) => p.sala === s.id && p.local === code);
+  const achadosIds = new Set(r.map((p) => p.id));
+  return `<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+      <div style="display:flex;flex-direction:column;gap:4px"><span class="lbl">${esc(s.nome)}</span><h2>${nomeLocal(l.kind, l.code)}</h2>
+        <span style="font-size:13px;color:var(--muted)">${KIND[l.kind]} · ${plural(itens.length, "produto", "produtos")}</span></div>
+      <button type="button" class="x" aria-label="Fechar local" onclick="M.local=null;M.foco=null;render()"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+    </div>
+    <div class="lista">${itens.length ? itens.map((p) => `
+      <button type="button" class="prod ${p.id === M.foco ? "foco" : achadosIds.has(p.id) ? "foco" : ""}" onclick="editar(${p.id})">
+        ${p.foto ? `<span class="mini-foto" style="background-image:url('${esc(p.foto)}')"></span>` : '<span class="mini-foto ph"></span>'}
+        <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span class="t">${esc(p.titulo)}</span>
+          <span class="m">${esc([p.marca, p.sku].filter(Boolean).join(" · "))}${p.obs ? " · " + esc(p.obs) : ""}</span></span>
+        <span class="qtd">${fmtQtd(p.quantidade)}</span>
+      </button>`).join("") : '<div class="vazio">Nenhum produto cadastrado neste local.</div>'}</div>
+    <button type="button" class="btn" onclick="adicionar('${s.id}','${l.code}')">+ Adicionar produto aqui</button>
+    <span style="font-size:12px;color:var(--dim)">Toque num produto para mudar a quantidade, mover de local ou tirar.</span>`;
+}
+
+function painelSala(s, r) {
+  const temBusca = !!M.busca.trim(), m = contar(r, s.id);
+  const linhas = s.locais
+    .map((l) => ({ l, n: contar(M.itens, s.id, l.code), m: contar(r, s.id, l.code) }))
+    .filter((x) => !temBusca || x.m > 0 || m === 0)
+    .sort((a, b) => b.m - a.m);
+  return `<div style="display:flex;flex-direction:column;gap:4px">
+      <h2>${temBusca ? plural(m, "produto encontrado", "produtos encontrados") + " aqui" : "Locais nesta sala"}</h2>
+      <span style="font-size:13px;color:var(--muted)">Toque em um local na planta ou na lista.</span></div>
+    <div class="lista">${linhas.map((x) => `
+      <button type="button" class="row" onclick="abrirLocal('${s.id}:${x.l.code}')">
+        <span class="chip ${x.m ? "match" : ""}">${x.l.code}</span>
+        <span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:600">${KIND[x.l.kind]}</span>
+          <span style="font-size:12px;color:var(--muted)">${x.n ? plural(x.n, "produto", "produtos") : "vazio"}</span></span>
+        ${x.m ? `<span class="badge">${achados(x.m)}</span>` : ""}
+      </button>`).join("")}</div>`;
+}
+function abrirLocal(id) { M.local = M.local === id ? null : id; M.foco = null; render(); }
+
+// ---------- adicionar / editar ----------
+let EDIT = null;
+function fecharModal() { $("modal").classList.add("hidden"); EDIT = null; }
+function opcoesLocais(sel) {
+  return Object.values(SALAS).flatMap((s) => s.locais.map((l) => {
+    const v = s.id + ":" + l.code;
+    return `<option value="${v}" ${v === sel ? "selected" : ""}>${s.nome} · ${nomeLocal(l.kind, l.code)}</option>`;
+  })).join("");
+}
+async function adicionar(sala, local) {
+  EDIT = { novo: true, sala, local, escolhido: null };
+  $("mTitulo").textContent = "Adicionar produto";
+  $("mBody").innerHTML = `
+    <span class="lbl">${esc(SALAS[sala].nome)} · ${nomeLocal(localDe({ sala, local }).kind, local)}</span>
+    <input class="minput" id="catBusca" placeholder="Buscar produto, marca ou SKU…" oninput="renderCatalogo()" autocomplete="off">
+    <div class="cat" id="cat"><div class="vazio">Carregando produtos dos anúncios…</div></div>
+    <div style="display:grid;grid-template-columns:1fr 2fr;gap:10px">
+      <div><span class="lbl">Quantidade</span><input class="minput" id="mQtd" type="number" inputmode="numeric" min="0" placeholder="—"></div>
+      <div><span class="lbl">Observação</span><input class="minput" id="mObs" placeholder="ex.: caixa fechada, 2ª prateleira"></div>
+    </div>
+    <button class="btn" id="mSalvar" onclick="salvar()" disabled>Escolha um produto</button>`;
+  $("modal").classList.remove("hidden");
+  setTimeout(() => $("catBusca").focus(), 50);
+  if (!M.catalogo) {
+    try { M.catalogo = (await apiGet("?catalogo=1")).produtos; }
+    catch (e) { $("cat").innerHTML = `<div class="vazio">Não carregou os produtos: ${esc(e.message)}</div>`; return; }
+  }
+  renderCatalogo();
+}
+function renderCatalogo() {
+  if (!EDIT || !$("cat")) return;
+  const q = semAcento($("catBusca").value);
+  const termos = q.split(/\s+/).filter(Boolean);
+  const lista = (M.catalogo || []).filter((p) => termos.every((t) => semAcento([p.titulo, p.marca, p.sku].join(" ")).includes(t))).slice(0, 60);
+  const livre = q && !lista.some((p) => semAcento(p.titulo) === q)
+    ? `<button type="button" class="prod ${EDIT.escolhido?.livre ? "on" : ""}" onclick="escolher(-1)"><span class="mini-foto ph"></span>
+        <span style="display:flex;flex-direction:column;gap:2px"><span class="t">Usar “${esc($("catBusca").value.trim())}”</span><span class="m">produto fora dos anúncios (ex.: caixas, material)</span></span><span></span></button>` : "";
+  $("cat").innerHTML = lista.map((p, k) => `
+    <button type="button" class="prod ${EDIT.escolhido && EDIT.escolhido.sku === p.sku && !EDIT.escolhido.livre ? "on" : ""}" onclick="escolher(${k})">
+      ${p.foto ? `<span class="mini-foto" style="background-image:url('${esc(p.foto)}')"></span>` : '<span class="mini-foto ph"></span>'}
+      <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span class="t">${esc(p.titulo)}</span><span class="m">${esc([p.marca, p.sku].filter(Boolean).join(" · "))}</span></span><span></span>
+    </button>`).join("") + livre || '<div class="vazio">Digite para buscar.</div>';
+  EDIT.listaAtual = lista;
+}
+function escolher(k) {
+  if (k < 0) EDIT.escolhido = { livre: true, titulo: $("catBusca").value.trim(), sku: null, marca: null, foto: null };
+  else EDIT.escolhido = { ...EDIT.listaAtual[k] };
+  renderCatalogo();
+  $("mSalvar").disabled = false;
+  $("mSalvar").textContent = "Salvar neste local";
+}
+function editar(id) {
+  const p = M.itens.find((x) => x.id === id); if (!p) return;
+  EDIT = { novo: false, id, p };
+  $("mTitulo").textContent = "Produto no local";
+  $("mBody").innerHTML = `
+    <div class="prod" style="border:1px solid var(--line)">
+      ${p.foto ? `<span class="mini-foto" style="background-image:url('${esc(p.foto)}')"></span>` : '<span class="mini-foto ph"></span>'}
+      <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span class="t">${esc(p.titulo)}</span><span class="m">${esc([p.marca, p.sku].filter(Boolean).join(" · "))}</span></span><span></span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 2fr;gap:10px">
+      <div><span class="lbl">Quantidade</span><input class="minput" id="mQtd" type="number" inputmode="numeric" min="0" value="${p.quantidade ?? ""}" placeholder="—"></div>
+      <div><span class="lbl">Observação</span><input class="minput" id="mObs" value="${esc(p.obs || "")}"></div>
+    </div>
+    <div><span class="lbl">Local</span><select class="minput" id="mLocal">${opcoesLocais(p.sala + ":" + p.local)}</select></div>
+    <button class="btn" id="mSalvar" onclick="salvar()">Salvar</button>
+    <button class="btn quiet" onclick="excluir()">Tirar deste local</button>`;
+  $("modal").classList.remove("hidden");
+}
+async function salvar() {
+  const btn = $("mSalvar"); btn.disabled = true; btn.textContent = "Salvando…";
+  const qtd = $("mQtd").value.trim(), obs = $("mObs").value.trim();
+  let body;
+  if (EDIT.novo) {
+    const e = EDIT.escolhido;
+    body = { acao: "salvar", sala: EDIT.sala, local: EDIT.local, sku: e.sku, titulo: e.titulo, marca: e.marca, foto: e.foto, quantidade: qtd, obs };
+  } else {
+    const [sala, local] = $("mLocal").value.split(":"), p = EDIT.p;
+    body = { acao: "salvar", id: p.id, sala, local, sku: p.sku, titulo: p.titulo, marca: p.marca, foto: p.foto, quantidade: qtd, obs };
+  }
+  const antes = EDIT.novo ? null : EDIT.p.sala + ":" + EDIT.p.local;
+  try {
+    await api(body);
+    fecharModal();
+    await carregar();
+    if (antes && antes !== body.sala + ":" + body.local) toast(`Movido para ${SALAS[body.sala].nome} · ${body.local}.`);
+    else toast("Salvo.");
+  } catch (e) { btn.disabled = false; btn.textContent = "Tentar de novo"; toast(e.message, 5000); }
+}
+async function excluir() {
+  const p = EDIT.p;
+  if (!confirm(`Tirar "${p.titulo}" de ${SALAS[p.sala].nome} · ${p.local}?`)) return;
+  try { await api({ acao: "excluir", id: p.id }); fecharModal(); await carregar(); toast("Tirado do local."); }
+  catch (e) { toast(e.message, 5000); }
+}
+
+// ---------- carregar ----------
+async function carregar() {
+  try { M.itens = (await apiGet()).locais || []; }
+  catch (e) { toast("Não carregou o mapa: " + e.message, 6000); }
+  render(); renderDrop();
+}
+render();
+carregar();
+</script>
+</body>
+</html>

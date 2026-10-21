@@ -89,3 +89,31 @@ create table if not exists produto_codigos (
   primary key (chave, codigo)
 );
 alter table produto_codigos enable row level security;
+
+-- 8) Mapa do estoque (21/10/2026): onde está cada produto (sala + prateleira/pallet).
+--    Um produto pode estar em mais de um local. Quantidade digitada pela equipe.
+create table if not exists estoque_locais (
+  id             bigserial primary key,
+  sala           text not null,          -- sala1 | sala2 | sala3
+  local          text not null,          -- A, B, ... (prateleira) | PL1..PL8 (pallet)
+  sku            text,
+  titulo         text not null,
+  marca          text,
+  foto           text,
+  quantidade     integer,
+  obs            text,
+  atualizado_em  timestamptz default now()
+);
+create index if not exists idx_estoque_locais_sala on estoque_locais(sala, local);
+alter table estoque_locais enable row level security;
+
+-- Catálogo para "adicionar produto": anúncios do ML agrupados por SKU (refeito a cada 24 h).
+create table if not exists catalogo_produtos (
+  sku            text primary key,
+  titulo         text not null,
+  marca          text,
+  foto           text,
+  item_ids       text[],
+  atualizado_em  timestamptz default now()
+);
+alter table catalogo_produtos enable row level security;
