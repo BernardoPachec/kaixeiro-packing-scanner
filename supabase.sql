@@ -74,3 +74,18 @@ create table if not exists flex_embalagens (
 );
 create index if not exists idx_flex_emb_ship on flex_embalagens(shipment_id, criado_em desc);
 alter table flex_embalagens enable row level security;
+
+-- 7) Códigos de barras ensinados na bancada (21/10/2026): ~1/4 dos anúncios não tem GTIN no
+--    ML; quando o EAN lido é do produto certo, "este código é deste produto" grava aqui.
+--    chave = SKU (vale para todos os anúncios do produto) ou MLB. Usado no Flex e no Full.
+create table if not exists produto_codigos (
+  chave       text not null,
+  codigo      text not null,
+  sku         text,
+  item_id     text,
+  titulo      text,
+  criado_por  text,
+  criado_em   timestamptz default now(),
+  primary key (chave, codigo)
+);
+alter table produto_codigos enable row level security;

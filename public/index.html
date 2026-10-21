@@ -122,6 +122,7 @@
   .check-item.on{border-color:#3ecf6e;background:rgba(62,207,110,.1);color:#3ecf6e}
   .check-item.on .box{background:#3ecf6e;border-color:#3ecf6e}
   .btn-big{margin-top:18px;font-size:19px;padding:18px;font-weight:800}
+  .ensinar{margin-top:8px;text-align:left;font-weight:500;font-size:15px}
   .ean-erro{margin-top:16px;background:#3a1420;border:1px solid #7f2436;color:#ffd5dd;border-radius:14px;padding:14px;font-size:15px}
   .link{color:var(--accent);font-weight:700;font-size:14px;text-decoration:none}
   .mini{color:rgba(255,255,255,.4);font-size:12px;text-decoration:underline}
@@ -315,7 +316,7 @@ function casaProduto(it, raw) {
   if (/^\d+$/.test(c)) return (it.gtins || []).some((g) => digits(norm(g)) === digits(c));
   return !!it.sku && norm(it.sku) === c;
 }
-const temCodigo = (it) => (it.gtins || []).length > 0 || !!it.sku;
+const temCodigo = (it) => (it.gtins || []).length > 0;
 const passosDe = (it) => it.checklist ? (it.checklist.passos || []) : [CONFERIR_ANUNCIO];
 
 function abrirPedido(d) {
@@ -377,8 +378,9 @@ function produtoHtml(it, k) {
         <div class="bip-top"><b>${P.semCodigo[k] ? "Conferido no olho" : `Bipado ${Math.min(lidos, qtd)} de ${qtd}`}</b><span>${ok ? "✓" : ""}</span></div>
         <div class="barra"><i style="width:${Math.min(100, Math.round((P.semCodigo[k] ? qtd : lidos) / qtd * 100))}%"></i></div>`
       : `
-        <div class="bip-top"><b>${P.semCodigo[k] ? "Conferido no olho ✓" : "Anúncio sem código de barras cadastrado"}</b></div>
-        ${P.semCodigo[k] ? "" : `<button class="btn btn-ghost" style="margin-top:8px" onclick="semCodigo(${k})">Conferi no olho as ${qtd} un.</button>`}`}
+        <div class="bip-top"><b>${P.semCodigo[k] ? "Conferido no olho ✓" : "Ainda não tenho o código de barras deste produto"}</b></div>
+        ${P.semCodigo[k] ? "" : `<p class="meta" style="margin:6px 0 0">Bipe uma unidade: a tela pergunta se o código é deste produto e guarda para as próximas vezes.</p>
+        <button class="btn btn-ghost" style="margin-top:8px" onclick="semCodigo(${k})">Conferi no olho as ${qtd} un.</button>`}`}
     </div>
 
     <div class="check">
@@ -412,7 +414,14 @@ function registrarLeitura(raw) {
   const ks = P.d.itens.map((it, k) => k).filter((k) => casaProduto(P.d.itens[k], code));
   if (!ks.length) {
     beep(false);
-    P.erro = `❌ Código <b>${esc(code)}</b> não é de nenhum produto deste pedido. Separe essa unidade.`;
+    // Pode ser o produto certo com o código ainda não cadastrado (anúncio sem GTIN no ML):
+    // oferece "é deste produto" para quem ainda tem unidade a bipar.
+    const pendentes = !/^\d{8,14}$/.test(code) ? [] :
+      P.d.itens.map((it, i) => i).filter((i) => !P.semCodigo[i] && P.lidos[i].length < (P.d.itens[i].quantity || 1));
+    P.erro = `❌ O código <b>${esc(code)}</b> não está cadastrado em nenhum produto deste pedido.`
+      + (pendentes.length ? `<br>Se você está com o produto certo na mão, toque nele para cadastrar o código:`
+        + pendentes.map((i) => `<button class="btn btn-ghost ensinar" onclick="ensinarCodigo(${i},'${code}')">É o código de: <b>${esc(P.d.itens[i].title)}</b></button>`).join("")
+        + `<br><span class="meta">Se não for, separe essa unidade: é outro produto.</span>` : " Separe essa unidade.");
     statusEan(P.erro, true);
     return renderPedido();
   }
@@ -429,6 +438,24 @@ function registrarLeitura(raw) {
   statusEan(`✓ ${esc(it.title)} · ${P.lidos[k].length} de ${it.quantity || 1}`, false);
   renderPedido();
   if (P.d.itens.every((x, i) => !temCodigo(x) || P.semCodigo[i] || P.lidos[i].length >= (x.quantity || 1))) setTimeout(fecharEan, 600);
+}
+
+// "Este código é deste produto": grava o EAN da embalagem para o produto (pelo SKU e pelo MLB),
+// vale daqui pra frente no Flex e no Scanner Full, e já conta esta unidade.
+async function ensinarCodigo(k, code) {
+  const it = P.d.itens[k];
+  if (!/^\d{8,14}$/.test(code)) return toast("Só dá para cadastrar código de barras numérico (EAN).", 4000);
+  if (!confirm(`O código ${code} é mesmo da embalagem de:\n\n${it.title}\n\nEle vai valer para este produto daqui pra frente.`)) return;
+  try {
+    const r = await fetch(API + "/api/flex", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ acao: "codigo", codigo: code, sku: it.sku, item_id: it.item_id, titulo: it.title }) });
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error || "Falha");
+    it.gtins = [...new Set([...(it.gtins || []), code])];
+    P.erro = null;
+    toast("Código cadastrado para este produto.");
+    registrarLeitura(code);
+  } catch (e) { toast("Não cadastrou: " + e.message, 5000); }
 }
 
 // ---------- Câmera para EAN ----------

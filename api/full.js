@@ -84,6 +84,18 @@ async function detalhe(frete) {
   );
   // Checklist de embalagem por SKU (batoque, fita, flanela...). Sem cadastro = padrão da tela.
   const skus = [...new Set(itens.map((i) => i.sku).filter(Boolean))];
+
+  // Códigos de barras ensinados na bancada ("este código é deste produto") entram na leitura.
+  const chavesCod = [...skus, ...itens.map((i) => i.item_id).filter(Boolean)];
+  if (chavesCod.length) {
+    try {
+      const cods = await sbSelect("produto_codigos", `chave=in.(${enc(chavesCod.map((c) => `"${c}"`).join(","))})&select=chave,codigo`);
+      for (const it of itens) {
+        const extra = cods.filter((c) => c.chave === it.sku || c.chave === it.item_id).map((c) => c.codigo);
+        if (extra.length) it.gtins = [...new Set([...(it.gtins || []), ...extra])];
+      }
+    } catch (e) { /* tabela ainda não criada */ }
+  }
   const checklists = {};
   if (skus.length) {
     const lista = skus.map((s) => `"${s.replace(/"/g, "")}"`).join(",");
