@@ -2,7 +2,7 @@
 //
 // POST /api/flex { acao:"codigo", codigo, sku, item_id, titulo }
 //   -> "este código de barras é deste produto" (tabela produto_codigos).
-// POST /api/flex { acao:"embalar", shipment_id, order_id, tipo, responsavel,
+// POST /api/flex { acao:"embalar", shipment_id, order_id, tipo, responsavel?,
 //                  itens:[{ item_id, titulo, quantidade, bipados, codigos, sem_codigo, passos }] }
 //   -> registra que o pedido foi embalado (quem, o que foi bipado, checklist marcado).
 //      Escanear a mesma etiqueta depois mostra "JÁ EMBALADO".
@@ -47,9 +47,9 @@ module.exports = async (req, res) => {
     if (b.acao !== "embalar") return send(res, 400, { ok: false, error: "acao desconhecida." });
 
     const shipment_id = clean(b.shipment_id);
-    const responsavel = clean(b.responsavel);
+    // "Quem embalou" saiu da bancada (21/10/2026); a coluna é obrigatória no banco.
+    const responsavel = clean(b.responsavel) || "não informado";
     if (!shipment_id || !/^\d{6,20}$/.test(shipment_id)) return send(res, 400, { ok: false, error: "Envio inválido." });
-    if (!responsavel) return send(res, 400, { ok: false, error: "Escolha quem embalou." });
 
     const itens = (Array.isArray(b.itens) ? b.itens : []).slice(0, 50).map((i) => ({
       item_id: clean(i.item_id),

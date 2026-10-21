@@ -138,10 +138,6 @@
   .ean-status{font-size:15px;line-height:1.5;border-radius:12px;padding:10px 12px;background:var(--card2)}
   .ean-status.ok{color:#3ecf6e}
   .ean-status.erro{background:#3a1420;color:#ffd5dd}
-  .quem-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  .quem-grid button{height:60px;background:#000;border:1px solid var(--line);border-radius:14px;color:#fff;font-weight:800;font-size:19px;font-family:inherit;cursor:pointer}
-  .quem-grid button.last{border-color:var(--accent)}
-  .quem-grid button.on{background:var(--accent);border-color:var(--accent);color:#000}
   .toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:40;background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:12px 18px;font-size:14px;max-width:calc(100vw - 32px)}
 </style>
 </head>
@@ -182,22 +178,6 @@
         <input id="eanManual" class="minput" placeholder="Ou digite / use o leitor USB" autocomplete="off" inputmode="numeric">
         <button class="btn btn-primary" style="width:auto;padding:0 18px" type="submit">Ler</button>
       </form>
-    </div>
-  </div>
-</div>
-
-<!-- Quem embalou (várias pessoas) -->
-<div class="modal hidden" id="quemModal">
-  <div class="mbox">
-    <div class="mhead"><span>Quem embalou?</span><button onclick="esconder('quemModal')" aria-label="Fechar">×</button></div>
-    <div class="mbody">
-      <span class="lbl">Pode marcar mais de um</span>
-      <div class="quem-grid" id="quemGrid"></div>
-      <form style="display:flex;gap:8px" onsubmit="event.preventDefault();addOutro()">
-        <input class="minput" id="quemOutro" placeholder="Outro: digite o nome">
-        <button class="btn btn-ghost" style="width:auto;padding:0 18px" type="submit">+ Outro</button>
-      </form>
-      <button class="btn btn-primary btn-big" id="quemGo" onclick="confirmarQuem()" disabled>Escolha quem embalou</button>
     </div>
   </div>
 </div>
@@ -304,7 +284,6 @@ function badgeClass(tipo){
 // Cada produto do pedido: bipar o código de barras de CADA unidade (EAN do anúncio/variação
 // ou o SKU) e marcar o checklist do anúncio (o mesmo do Scanner Full). O botão "Marcar como
 // embalado" só libera com tudo bipado e marcado; depois escolhe quem embalou.
-const EQUIPE = ["Douglas", "Ber", "Wilson", "Cássia", "Giulia"];
 const CONFERIR_ANUNCIO = "Conferi no anúncio o que vai neste pacote";
 let P = null; // pedido aberto
 
@@ -324,10 +303,11 @@ function abrirPedido(d) {
   renderPedido();
 }
 
+// Bipar é só para conferir se é o produto certo (não trava o botão): o pacote fica pronto com
+// o checklist marcado. (Bernardo, 21/10/2026)
 function itemPronto(k) {
   const it = P.d.itens[k];
-  const bipou = P.semCodigo[k] || P.lidos[k].length >= (it.quantity || 1);
-  return bipou && passosDe(it).every((_, j) => P.feitos[k].has(j));
+  return passosDe(it).every((_, j) => P.feitos[k].has(j));
 }
 
 function renderPedido() {
@@ -337,7 +317,7 @@ function renderPedido() {
   const emb = d.embalagem;
   const quando = emb ? new Date(emb.criado_em).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "";
   $("resultContent").innerHTML = `
-    ${emb ? `<div class="ja-embalado">⛔ JÁ EMBALADO<br><span>por ${esc(emb.responsavel)} em ${quando}</span></div>` : ""}
+    ${emb ? `<div class="ja-embalado">⛔ JÁ EMBALADO<br><span>${emb.responsavel && emb.responsavel !== "não informado" ? `por ${esc(emb.responsavel)} ` : ""}em ${quando}</span></div>` : ""}
     ${totalQtd > 1 ? `<div class="qty-alert">⚠️ ATENÇÃO: ${totalQtd} UNIDADES NESTE PEDIDO ⚠️</div>` : ""}
     <div class="result" style="margin-top:0">
       <span class="badge ${badgeClass(d.tipo)}">${esc(d.tipo)}</span>
@@ -354,7 +334,7 @@ function renderPedido() {
 
     <button class="btn btn-ghost btn-big" onclick="abrirEan()">📷 Bipar produtos</button>
     <button class="btn btn-primary btn-big" style="margin-top:12px" ${tudo ? "" : "disabled"} onclick="marcarEmbalado()">${emb ? "Já embalado · marcar de novo" : "Marcar como embalado"}</button>
-    ${tudo ? "" : `<p class="scan-hint">Bipe todas as unidades e marque o checklist de cada produto para liberar.</p>`}`;
+    ${tudo ? "" : `<p class="scan-hint">Marque o checklist de cada produto para liberar. Bipar é opcional, para conferir se é o produto certo.</p>`}`;
 }
 
 function produtoHtml(it, k) {
@@ -378,9 +358,8 @@ function produtoHtml(it, k) {
         <div class="bip-top"><b>${P.semCodigo[k] ? "Conferido no olho" : `Bipado ${Math.min(lidos, qtd)} de ${qtd}`}</b><span>${ok ? "✓" : ""}</span></div>
         <div class="barra"><i style="width:${Math.min(100, Math.round((P.semCodigo[k] ? qtd : lidos) / qtd * 100))}%"></i></div>`
       : `
-        <div class="bip-top"><b>${P.semCodigo[k] ? "Conferido no olho ✓" : "Ainda não tenho o código de barras deste produto"}</b></div>
-        ${P.semCodigo[k] ? "" : `<p class="meta" style="margin:6px 0 0">Bipe uma unidade: a tela pergunta se o código é deste produto e guarda para as próximas vezes.</p>
-        <button class="btn btn-ghost" style="margin-top:8px" onclick="semCodigo(${k})">Conferi no olho as ${qtd} un.</button>`}`}
+        <div class="bip-top"><b>Ainda não tenho o código de barras deste produto</b></div>
+        <p class="meta" style="margin:6px 0 0">Opcional: bipe uma unidade e a tela pergunta se o código é deste produto, para conferir nas próximas vezes.</p>`}
     </div>
 
     <div class="check">
@@ -400,11 +379,6 @@ function produtoHtml(it, k) {
 function togglePasso(k, j) {
   const s = P.feitos[k]; s.has(j) ? s.delete(j) : s.add(j);
   const y = window.scrollY; renderPedido(); window.scrollTo(0, y);
-}
-function semCodigo(k) {
-  const it = P.d.itens[k];
-  if (!confirm(`Este anúncio não tem código de barras cadastrado. Confirma que conferiu pelo nome/foto as ${it.quantity || 1} unidade(s)?`)) return;
-  P.semCodigo[k] = true; renderPedido();
 }
 
 // Uma leitura vale para o produto do pedido cujo código bate e que ainda tem unidade a bipar.
@@ -500,55 +474,23 @@ document.addEventListener("keydown", (ev) => {
   if (ev.key.length === 1) kb += ev.key;
 });
 
-// ---------- Marcar como embalado + quem embalou ----------
-function marcarEmbalado() {
+// ---------- Marcar como embalado ----------
+async function marcarEmbalado() {
   if (P.d.embalagem && !confirm("Este pedido JÁ FOI EMBALADO. Marcar de novo mesmo assim?")) return;
-  S.quemSel = new Set();
-  let ultimos = [], outros = [];
-  try { ultimos = JSON.parse(localStorage.getItem("kxflex.quem.ultimos") || "[]"); outros = JSON.parse(localStorage.getItem("kxflex.outros") || "[]"); } catch {}
-  S.quemLista = [...EQUIPE, ...outros.filter((n) => !EQUIPE.includes(n))];
-  S.quemUltimos = ultimos;
-  $("quemOutro").value = "";
-  renderQuem(); mostrar("quemModal");
-}
-const S = {};
-function renderQuem() {
-  $("quemGrid").innerHTML = S.quemLista.map((n, k) =>
-    `<button class="${S.quemSel.has(n) ? "on" : S.quemUltimos.includes(n) ? "last" : ""}" onclick="toggleQuem(${k})">${S.quemSel.has(n) ? "✓ " : ""}${esc(n)}</button>`).join("");
-  const nomes = [...S.quemSel];
-  $("quemGo").disabled = !nomes.length;
-  $("quemGo").textContent = nomes.length ? `Confirmar · ${nomes.join(", ")}` : "Escolha quem embalou";
-}
-function toggleQuem(k) { const n = S.quemLista[k]; S.quemSel.has(n) ? S.quemSel.delete(n) : S.quemSel.add(n); renderQuem(); }
-function addOutro() {
-  const n = $("quemOutro").value.trim().replace(/\s+/g, " ");
-  if (!n) return toast("Digite o nome em \"Outro\".");
-  if (!S.quemLista.includes(n)) S.quemLista.push(n);
-  S.quemSel.add(n); $("quemOutro").value = ""; renderQuem();
-}
-async function confirmarQuem() {
-  const nomes = [...S.quemSel]; if (!nomes.length) return;
-  try {
-    localStorage.setItem("kxflex.quem.ultimos", JSON.stringify(nomes));
-    const outros = nomes.filter((n) => !EQUIPE.includes(n));
-    const antigos = JSON.parse(localStorage.getItem("kxflex.outros") || "[]");
-    localStorage.setItem("kxflex.outros", JSON.stringify([...new Set([...outros, ...antigos])].slice(0, 6)));
-  } catch {}
-  const btn = $("quemGo"); btn.disabled = true; btn.textContent = "Salvando…";
-  const d = P.d;
+  const d = P.d, btn = document.querySelector(".btn.btn-primary.btn-big");
+  if (btn) { btn.disabled = true; btn.textContent = "Salvando…"; }
   try {
     const r = await fetch(API + "/api/flex", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
-      acao: "embalar", shipment_id: d.shipment_id, order_id: d.order_id, tipo: d.tipo, responsavel: nomes.join(", "),
+      acao: "embalar", shipment_id: d.shipment_id, order_id: d.order_id, tipo: d.tipo,
       itens: d.itens.map((it, k) => ({ item_id: it.item_id, titulo: it.title, quantidade: it.quantity, bipados: P.lidos[k].length,
         codigos: P.lidos[k], sem_codigo: P.semCodigo[k], passos: passosDe(it).filter((_, j) => P.feitos[k].has(j)) })),
     }) });
     const res = await r.json();
     if (!res.ok) throw new Error(res.error || "Falha ao salvar");
-    esconder("quemModal");
     beep(true);
-    toast(`Pedido #${d.shipment_id} embalado por ${nomes.join(", ")}.`, 3000);
+    toast(`Pedido #${d.shipment_id} marcado como embalado.`, 3000);
     voltarParaScanner();
-  } catch (e) { toast("Não salvou: " + e.message, 5000); renderQuem(); }
+  } catch (e) { toast("Não salvou: " + e.message, 5000); renderPedido(); }
 }
 
 // ---------- Alterar checklist (o mesmo do Scanner Full, por anúncio) ----------
