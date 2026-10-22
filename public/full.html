@@ -89,6 +89,13 @@
   .fchip:hover{border-color:#555;color:#fff}
   .fchip.on{background:var(--y);border-color:var(--y);color:#000}
   .chip.w{border-color:#fff;color:#fff}
+  .ordenar{position:relative}
+  .odrop{position:absolute;top:44px;left:0;z-index:15;background:var(--s1);border:1px solid var(--line2);min-width:270px;box-shadow:0 12px 32px rgba(0,0,0,.6)}
+  .odrop button{display:block;width:100%;text-align:left;padding:12px 14px;background:none;border:0;border-bottom:1px solid var(--line);color:#fff;font:500 15px var(--fb);cursor:pointer}
+  .odrop button:hover{background:var(--s3)}
+  .odrop button.on{color:var(--y)}
+  .grupo{display:flex;justify-content:space-between;gap:12px;padding:12px 22px;background:var(--s2);border-bottom:1px solid var(--line);font:600 15px var(--fh);letter-spacing:.12em;text-transform:uppercase;color:var(--y)}
+  .grupo span:last-child{color:var(--muted);font-weight:500}
   .mini.w:hover{color:#fff}
   .mini{background:transparent;border:0;color:var(--dim);font:500 12px var(--fb);cursor:pointer;padding:2px 0;text-decoration:underline;text-underline-offset:3px}
   .mini:hover{color:var(--badtxt)}
@@ -306,6 +313,7 @@ const hide = (id) => $(id).classList.add("hidden");
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
 const fmt = (n) => Number(n || 0).toLocaleString("pt-BR");
 const pct = (a, b) => (b ? Math.round((a / b) * 100) : 0);
+const plural = (n, um, varios) => (n === 1 ? "1 " + um : fmt(n) + " " + varios);
 const go = (h) => { if (location.hash === h) route(); else location.hash = h; };
 function toast(msg, ms = 2600) { const t = $("toast"); t.textContent = msg; show("toast"); clearTimeout(toast._t); toast._t = setTimeout(() => hide("toast"), ms); }
 function pref(k, def) { try { const v = localStorage.getItem("kxfull." + k); return v == null ? def : v === "1"; } catch { return def; } }
@@ -657,11 +665,60 @@ function casaBusca(it, q) {
   const alvo = semAcento([it.titulo, it.inv, it.sku, it.ean, it.item_id, ...(it.gtins || [])].join(" "));
   return termos.every((t) => alvo.includes(t));
 }
+// Ordenar por (quantidade / preço) e agrupar por marca. Ficam guardados no aparelho.
+const ORDENS = [
+  ["padrao", "Padrão (SKU)"],
+  ["qtd_desc", "Quantidade: maior → menor"],
+  ["qtd_asc", "Quantidade: menor → maior"],
+  ["preco_desc", "Preço: maior → menor"],
+  ["preco_asc", "Preço: menor → maior"],
+];
+try { S.ordem = localStorage.getItem("kxfull.ordem") || "padrao"; S.agrupar = localStorage.getItem("kxfull.agrupar") === "1"; } catch { S.ordem = "padrao"; }
+// Marca: a do anúncio (ML) ou, se faltar, pelo começo do SKU.
+const MARCAS_SKU = { CADILLAC: "Cadillac", AA: "Autoamerica", KERS: "Kers", JACA: "Jaça", DUB: "Dub Boyz", MAGIL: "Magil Clean",
+  MENZ: "Menzerna", MOTHERS: "Mothers", LINCOLN: "Lincoln", NACAO: "Nação Detail", AUTOLIMPE: "Autolimpe" };
+const marcaDe = (it) => it.marca || MARCAS_SKU[String(it.sku || "").split("_")[0]] || "Sem marca";
+const fmtPreco = (v) => (v == null ? "" : Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }));
+function ordenarItens(lista) {
+  const l = [...lista];
+  const o = S.ordem || "padrao";
+  const preco = (it, sobe) => (it.preco == null ? (sobe ? Infinity : -Infinity) : Number(it.preco)); // sem preço vai pro fim
+  const cmp = {
+    padrao: (a, b) => String(a.sku || a.inv).localeCompare(String(b.sku || b.inv), "pt-BR"),
+    qtd_desc: (a, b) => b.unidades - a.unidades,
+    qtd_asc: (a, b) => a.unidades - b.unidades,
+    preco_desc: (a, b) => (preco(b, false) - preco(a, false)) || 0,
+    preco_asc: (a, b) => (preco(a, true) - preco(b, true)) || 0,
+  }[o] || (() => 0);
+  l.sort((a, b) => (S.agrupar ? marcaDe(a).localeCompare(marcaDe(b), "pt-BR") : 0) || cmp(a, b));
+  return l;
+}
 function listaTela02() {
   const fl = filtrosEnvio();
   const atual = fl.todos.find(([k]) => k === S.itemFiltro) || fl.base[0];
-  return { fl, atual, lista: S.itens.filter((i) => atual[2](i) && casaBusca(i, S.buscaItem)) };
+  return { fl, atual, lista: ordenarItens(S.itens.filter((i) => atual[2](i) && casaBusca(i, S.buscaItem))) };
 }
+async function setOrdem(k) {
+  S.ordem = k; S.ordemAberta = false;
+  try { localStorage.setItem("kxfull.ordem", k); } catch {}
+  renderEnvio();
+  // Envio importado antes de guardar preço: busca os preços no ML uma vez.
+  if (k.startsWith("preco") && S.itens.some((i) => i.preco == null) && !(S.precoBuscado || {})[S.envio.frete]) {
+    S.precoBuscado = { ...(S.precoBuscado || {}), [S.envio.frete]: true };
+    toast("Buscando os preços no Mercado Livre…", 4000);
+    try { await api({ acao: "enriquecer", frete: S.envio.frete }); await loadEnvio(S.envio.frete); renderEnvio(); }
+    catch (e) { toast("Não buscou os preços: " + e.message, 5000); }
+  }
+}
+function toggleAgrupar() {
+  S.agrupar = !S.agrupar;
+  try { localStorage.setItem("kxfull.agrupar", S.agrupar ? "1" : "0"); } catch {}
+  renderEnvio();
+}
+function toggleOrdem(ev) { ev.stopPropagation(); S.ordemAberta = !S.ordemAberta; renderEnvio(); }
+document.addEventListener("click", (ev) => {
+  if (S.ordemAberta && !ev.target.closest(".ordenar")) { S.ordemAberta = false; renderEnvio(); }
+});
 function buscarItem(v) {
   S.buscaItem = v;
   const el = $("buscaItem"), pos = el ? el.selectionStart : null;
@@ -698,10 +755,15 @@ function renderEnvio() {
       <button class="btn ghost" onclick="imprimirEnvio()">Imprimir PDF${atual[0] === "todos" ? "" : " · " + esc(atual[1])}</button>
     </div>
 
-    <div class="search" style="max-width:none">${ICON.search}<input id="buscaItem" value="${esc(S.buscaItem || "")}" placeholder="Buscar produto por nome, Código ML, SKU ou EAN" oninput="buscarItem(this.value)" autocomplete="off">${S.buscaItem ? `<button class="mini" onclick="buscarItem('')">limpar</button>` : ""}</div>
+    <div class="search" style="max-width:none;flex:none">${ICON.search}<input id="buscaItem" value="${esc(S.buscaItem || "")}" placeholder="Buscar produto por nome, Código ML, SKU ou EAN" oninput="buscarItem(this.value)" autocomplete="off">${S.buscaItem ? `<button class="mini" onclick="buscarItem('')">limpar</button>` : ""}</div>
 
     <div class="filtros">
       <span class="lbl">Filtrar</span>${fl.base.map(chip).join("")}
+      <div class="ordenar">
+        <button class="fchip ${S.ordem !== "padrao" ? "on" : ""}" onclick="toggleOrdem(event)">Ordenar por${S.ordem !== "padrao" ? ": " + esc((ORDENS.find(([k]) => k === S.ordem) || ORDENS[0])[1]) : ""} ▾</button>
+        ${S.ordemAberta ? `<div class="odrop">${ORDENS.map(([k, l]) => `<button class="${S.ordem === k ? "on" : ""}" onclick="setOrdem('${k}')">${S.ordem === k ? "✓ " : ""}${esc(l)}</button>`).join("")}</div>` : ""}
+      </div>
+      <button class="fchip ${S.agrupar ? "on" : ""}" onclick="toggleAgrupar()">${S.agrupar ? "✓ " : ""}Agrupar por marca</button>
       ${fl.pessoas.length ? `<span class="lbl" style="margin-left:6px">Feito por</span>${fl.pessoas.map(chip).join("")}` : ""}
     </div>
 
@@ -709,14 +771,18 @@ function renderEnvio() {
 
     <div class="table">
       <div class="thead g-itm lbl"><span>Produto · ${lista.length} de ${S.itens.length}</span><span>Declaradas</span><span>Conferidas</span><span>Status</span><span></span></div>
-      ${lista.length ? lista.map((it) => {
+      ${lista.length ? lista.map((it, n) => {
+        const grupo = S.agrupar && (n === 0 || marcaDe(lista[n - 1]) !== marcaDe(it)) ? (() => {
+          const da = lista.filter((x) => marcaDe(x) === marcaDe(it));
+          return `<div class="grupo"><span>${esc(marcaDe(it))}</span><span>${plural(da.length, "produto", "produtos")} · ${fmt(da.reduce((a, x) => a + x.unidades, 0))} un.</span></div>`;
+        })() : "";
         const [st, sc] = itemStatus(it), p = pct(it.conferidas, it.unidades);
         const por = (S.feitosPor || {})[it.inv] || [];
-        return `<div class="trow g-itm ${it.alerta ? "alerta" : ""}" onclick="go('#/envio/${F}/${it.inv}')">
+        return grupo + `<div class="trow g-itm ${it.alerta ? "alerta" : ""}" onclick="go('#/envio/${F}/${it.inv}')">
           <div class="full" style="display:flex;gap:14px;align-items:center;min-width:0">
             ${thumb(it)}
             <div style="display:flex;flex-direction:column;gap:5px;min-width:0">
-              <span style="font-size:12px;color:var(--muted)">Código ML <span class="mono" style="color:#fff">${esc(it.inv)}</span> · SKU <span class="mono" style="color:#fff">${esc(it.sku || "—")}</span></span>
+              <span style="font-size:12px;color:var(--muted)">Código ML <span class="mono" style="color:#fff">${esc(it.inv)}</span> · SKU <span class="mono" style="color:#fff">${esc(it.sku || "—")}</span>${it.preco != null ? ` · <span style="color:#fff">${fmtPreco(it.preco)}</span>` : ""}</span>
               <span style="font-size:16px;font-weight:600;line-height:1.3">${esc(it.titulo)}</span>
               <div style="display:flex;gap:6px;flex-wrap:wrap">
                 ${it.separado ? '<span class="chip w">SEPARADO</span>' : ""}
@@ -775,11 +841,13 @@ function imprimirEnvio() {
   const unid = lista.reduce((a, i) => a + i.unidades, 0);
   const agora = new Date().toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
   const linhas = lista.map((it, n) => {
+    const grupo = S.agrupar && (n === 0 || marcaDe(lista[n - 1]) !== marcaDe(it))
+      ? `<tr class="grp"><td colspan="6">${esc(marcaDe(it))}</td></tr>` : "";
     const ck = ckEtq(it), por = (S.feitosPor || {})[it.inv] || [];
     const vai = !ck ? `<i>Sem checklist cadastrado: conferir no anúncio o que vai junto.</i>`
       : !(ck.passos || []).length ? "Só o produto (sem flanela, aplicador ou outro item)."
       : `<ul>${ck.passos.map((p) => `<li><span class="cx"></span>${esc(p)}</li>`).join("")}</ul>`;
-    return `<tr class="${it.alerta ? "alerta" : ""}">
+    return grupo + `<tr class="${it.alerta ? "alerta" : ""}">
       <td class="num">${n + 1}</td>
       <td class="foto">${it.foto ? `<img src="${esc(it.foto)}" alt="">` : '<div class="semfoto">sem foto</div>'}</td>
       <td class="prod">
@@ -817,6 +885,7 @@ function imprimirEnvio() {
   .instr{font-size:9px;color:#444;margin-top:3px}
   .alrt{margin-top:4px;padding:3px 5px;border:1.5px solid #000;font-weight:bold;background:#eee}
   tr.alerta td{background:#f4f4f4}
+  tr.grp td{background:#000;color:#fff;font-weight:bold;font-size:12px;letter-spacing:.1em;text-transform:uppercase;padding:5px 6px}
   .vai{width:34%}.vai ul{margin:2px 0 0;padding:0;list-style:none}.vai li{margin:2px 0;display:flex;gap:5px;align-items:flex-start}
   .lbl{font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:#555}
   .cx{display:inline-block;flex:none;width:10px;height:10px;border:1.2px solid #000;margin-top:1px}

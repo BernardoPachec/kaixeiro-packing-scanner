@@ -112,3 +112,10 @@ alter table full_envio_itens add column if not exists alerta_em     timestamptz;
 -- ============================================================
 alter table full_envio_itens add column if not exists separado     boolean not null default false;
 alter table full_envio_itens add column if not exists separado_em  timestamptz;
+
+-- ============================================================
+--  Adição de 22/10/2026: preço e marca de cada linha (Tela 02: ordenar por preço,
+--  agrupar por marca). Preenchidos pelo "enriquecer" (API do ML, por anúncio).
+-- ============================================================
+alter table full_envio_itens add column if not exists preco  numeric;
+alter table full_envio_itens add column if not exists marca  text;

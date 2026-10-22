@@ -85,6 +85,15 @@ async function detalhe(frete) {
   // Checklist de embalagem por SKU (batoque, fita, flanela...). Sem cadastro = padrão da tela.
   const skus = [...new Set(itens.map((i) => i.sku).filter(Boolean))];
 
+  // Marca de reserva (item importado antes de guardar marca): catálogo do Mapa do estoque.
+  const semMarca = [...new Set(itens.filter((i) => !i.marca && i.sku).map((i) => i.sku))];
+  if (semMarca.length) {
+    try {
+      const cat = await sbSelect("catalogo_produtos", `sku=in.(${enc(semMarca.map((c) => `"${c}"`).join(","))})&select=sku,marca`);
+      for (const it of itens) if (!it.marca) it.marca = cat.find((c) => c.sku === it.sku)?.marca || null;
+    } catch (e) { /* catálogo indisponível */ }
+  }
+
   // Códigos de barras ensinados na bancada ("este código é deste produto") entram na leitura.
   const chavesCod = [...skus, ...itens.map((i) => i.item_id).filter(Boolean)];
   if (chavesCod.length) {
@@ -229,7 +238,7 @@ async function enriquecer(frete) {
 
   const porInv = {};
   const lista = [...ids];
-  const attrs = "id,inventory_id,thumbnail,pictures,permalink,attributes,variations";
+  const attrs = "id,inventory_id,thumbnail,pictures,permalink,attributes,variations,price";
   for (let k = 0; k < lista.length; k += 20) {
     const r = await mlFetchWithToken(`/items?ids=${lista.slice(k, k + 20).join(",")}&attributes=${attrs}`, row);
     if (r.status !== 200 || !Array.isArray(r.data)) { falhas.push(`itens: ${r.status}`); continue; }
@@ -238,7 +247,10 @@ async function enriquecer(frete) {
       const invs = [body.inventory_id, ...(body.variations || []).map((v) => v.inventory_id)].filter(Boolean);
       const foto = body.pictures?.[0]?.secure_url || (body.thumbnail || "").replace(/^http:/, "https:") || null;
       for (const inv of invs) {
-        porInv[inv] = { item_id: body.id, foto, permalink: body.permalink || null, gtins: gtinsDe(body) };
+        // preço e marca: para "ordenar por preço" e "agrupar por marca" na Tela 02
+        const marca = (body.attributes || []).find((a) => a.id === "BRAND")?.value_name || null;
+        porInv[inv] = { item_id: body.id, foto, permalink: body.permalink || null, gtins: gtinsDe(body),
+          preco: typeof body.price === "number" ? body.price : null, marca };
       }
     }
   }
