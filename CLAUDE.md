@@ -9,8 +9,10 @@ correções estão no commit `997d0a6`. Estas regras existem para não voltar a 
 
 ## Estrutura
 
-- Três páginas em `public/`: `index.html` (Bancada Flex/Agência), `mapa.html` (Mapa do estoque),
-  `full.html` (Scanner Full, com rotas por `#/`). APIs serverless em `api/` (Vercel + Supabase).
+- Quatro páginas em `public/`: `index.html` (Bancada Flex/Agência), `mapa.html` (Mapa do estoque),
+  `full.html` (Scanner Full, rotas por `#/`), `devolucoes.html` (Devoluções: bipa a etiqueta,
+  relatório da reclamação e veredito Perfeito/Reutilizável/Lixo, rotas por `#/`).
+  APIs serverless em `api/` (Vercel + Supabase).
 - Compartilhados: `public/kx-app.js` (kxLoad, kxPreload, kxCache, registro do service worker),
   `public/kx-ui.css` (visual: fundo, vidro, barra de abas, cartões), `public/sw.js` (PWA).
 - Deploy: push na `main` → Vercel publica sozinho.
@@ -48,7 +50,7 @@ correções estão no commit `997d0a6`. Estas regras existem para não voltar a 
   desfoque em área grande deixa a rolagem pesada no celular.
 - Fundo é estático (`body::before/::after`). Nada de animação contínua, canvas ou vídeo de fundo.
 - Componente novo reaproveita as classes e variáveis de `kx-ui.css` em vez de criar CSS paralelo.
-- Barra de abas igual nas três páginas: mudou uma, mude as três.
+- Barra de abas igual nas quatro páginas: mudou uma, mude todas.
 
 ## Antes de entregar
 

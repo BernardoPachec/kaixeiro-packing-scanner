@@ -76,8 +76,8 @@ body::after{
 }
 .tabbar a{
   position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
-  width:76px;height:56px;border-radius:24px;color:rgba(255,255,255,.62);text-decoration:none;
-  font:600 11px/1 "Barlow",system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;
+  width:78px;height:56px;border-radius:24px;color:rgba(255,255,255,.62);text-decoration:none;
+  font:600 10.5px/1 "Barlow",system-ui,sans-serif;letter-spacing:.03em;text-transform:uppercase;
   transition:color .2s ease,background-color .2s ease,transform .15s ease;
 }
 .tabbar a svg{width:22px;height:22px;flex:none}
@@ -169,5 +169,7 @@ body::after{
   .kx-full .kpis span{font-size:12px;line-height:1.25}
 }
 @media (max-width:420px){
-  .tabbar a{width:68px}
+  /* 4 abas cabem em 375px: 4 × 76 + folgas */
+  .tabbar{gap:2px;padding:5px}
+  .tabbar a{width:76px;font-size:10px;letter-spacing:.01em}
 }

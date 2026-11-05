@@ -54,6 +54,17 @@
           "sizes": "192x192"
         }
       ]
+    },
+    {
+      "name": "Devoluções",
+      "short_name": "Devoluções",
+      "url": "./devolucoes.html",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ]
 }

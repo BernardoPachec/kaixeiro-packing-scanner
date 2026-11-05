@@ -1,8 +1,8 @@
 // sw.js — guarda o app no aparelho (PWA). Troque VERSAO quando quiser forçar todo mundo a
 // baixar os arquivos de novo (normalmente não precisa: o HTML vem sempre da rede quando há
 // conexão, e CSS/JS se atualizam sozinhos na abertura seguinte).
-const VERSAO = "kx-2026-11-05";
-const APP = ["index.html", "mapa.html", "full.html", "kx-ui.css", "kx-app.js", "full-ml.js", "full-pdf.js",
+const VERSAO = "kx-2026-11-05b";
+const APP = ["index.html", "mapa.html", "full.html", "devolucoes.html", "kx-ui.css", "kx-app.js", "full-ml.js", "full-pdf.js",
   "manifest.json", "icon-192.png", "apple-touch-icon.png"];
 const LIBS = ["https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"];
 

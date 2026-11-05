@@ -17,6 +17,9 @@
     },
     "api/mapa.js": {
       "maxDuration": 60
+    },
+    "api/devolucoes.js": {
+      "maxDuration": 30
     }
   },
   "headers": [

@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<meta name="theme-color" content="#060606" />
+<title>Kaixeiro · Devoluções</title>
+<link rel="manifest" href="manifest.json" />
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
+<link rel="icon" type="image/png" href="icon-192.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- Câmera (html5-qrcode) carrega só quando usada: kxLoad em kx-app.js -->
+<script src="kx-app.js"></script>
+<style>
+  /* Devoluções: conferência do produto que voltou do comprador. Mesma identidade das outras
+     telas (preto, branco, amarelo #F3AA07). Verde, cinza e vermelho só nos vereditos:
+     Perfeito, Reutilizável e Lixo. */
+  :root{
+    --s1:#0A0A0A; --s4:#1A1A1A; --line:#262626; --line2:#333; --muted:#9a9a9a; --dim:#6b6b6b;
+    --y:#F3AA07; --ok:#3ecf6e; --okbg:rgba(62,207,110,.12); --cinza:#b5b5b5; --cinzabg:rgba(255,255,255,.08);
+    --bad:#ff5a5a; --badbg:rgba(255,90,90,.12);
+    --fh:"Barlow Condensed",system-ui,sans-serif; --fb:"Barlow",system-ui,sans-serif; --mono:ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;color:#fff;font-family:var(--fb);font-size:15px;line-height:1.45}
+  button{font-family:inherit;cursor:pointer}
+  a{color:var(--y);text-decoration:none}
+  .hidden{display:none !important}
+  .mono{font-family:var(--mono)}
+  .lbl{font:500 12px var(--fh);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  .eyebrow{font:500 13px var(--fh);letter-spacing:.2em;text-transform:uppercase;color:var(--y)}
+  .h1{margin:0;font:600 36px/1 var(--fh);text-transform:uppercase;letter-spacing:.01em}
+  .sub{margin:0;color:var(--muted);font-size:15px}
+
+  header{z-index:10;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px}
+  .brand{display:flex;align-items:center;gap:10px}
+  .brand .ico{width:38px;height:38px;border:1px solid var(--y);border-radius:12px;display:flex;align-items:center;justify-content:center}
+  .brand b{display:block;font:600 18px/1 var(--fh);letter-spacing:.06em;text-transform:uppercase}
+  .brand span{font:500 11px var(--fh);letter-spacing:.2em;text-transform:uppercase;color:var(--y)}
+  .seg{display:flex;gap:4px;padding:4px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)}
+  .seg a{padding:8px 12px;border-radius:10px;color:#cfcfcf;font:600 13px var(--fh);letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
+  .seg a.on{background:linear-gradient(180deg,#FFCB52,#F3AA07 58%,#C98700);color:#111}
+
+  main{width:100%;max-width:720px;margin:0 auto;padding:22px 16px calc(120px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:16px}
+  .card{border:1px solid rgba(255,255,255,.09);border-radius:20px;padding:18px}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:48px;padding:0 18px;border:0;border-radius:12px;background:linear-gradient(180deg,#FFCB52,#F3AA07 58%,#C98700);color:#111;font:600 15px var(--fh);letter-spacing:.1em;text-transform:uppercase;box-shadow:inset 0 1px 0 rgba(255,255,255,.55),0 10px 26px -10px rgba(243,170,7,.75)}
+  .btn.ghost{background:rgba(255,255,255,.04);color:#fff;border:1px solid rgba(255,255,255,.14);box-shadow:none}
+  .btn:disabled{opacity:.45;cursor:default}
+  .minput{width:100%;height:50px;background:rgba(0,0,0,.5);border:1px solid var(--line2);border-radius:12px;color:#fff;padding:0 14px;font:16px var(--fb);outline:0}
+  .minput:focus{border-color:var(--y)}
+  textarea.minput{height:84px;padding:10px 14px;line-height:1.4;resize:vertical}
+
+  /* Conferir */
+  .scan-big{display:flex;align-items:center;gap:16px;width:100%;text-align:left;color:#fff;padding:20px;border:1px solid rgba(243,170,7,.45);border-radius:22px;
+    background:radial-gradient(120% 140% at 0% 0%,rgba(243,170,7,.22),rgba(243,170,7,.04) 60%);box-shadow:0 0 50px -18px rgba(243,170,7,.6)}
+  .scan-big .ic{flex:none;width:64px;height:64px;border-radius:18px;background:linear-gradient(180deg,#FFCB52,#F3AA07 58%,#C98700);color:#111;display:flex;align-items:center;justify-content:center}
+  .scan-big b{display:block;font:600 24px/1.1 var(--fh);text-transform:uppercase;letter-spacing:.04em}
+  .scan-big small{color:var(--muted);font-size:13px}
+  .linha{display:flex;gap:8px}
+
+  /* Relatório */
+  .chips{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{font:600 12px var(--fh);letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--line2);border-radius:99px;padding:4px 10px;color:#d6d6d6;white-space:nowrap}
+  .chip.y{border-color:#5a4210;color:var(--y)} .chip.bad{border-color:#5c2323;color:var(--bad)} .chip.ok{border-color:#1f5c37;color:var(--ok)}
+  .oque{margin:6px 0 0;font:600 22px/1.25 var(--fb)}
+  .fonte{display:inline-flex;gap:6px;align-items:center;margin-top:10px;font-size:12px;color:var(--y);background:rgba(243,170,7,.1);border:1px solid #5a4210;border-radius:99px;padding:3px 10px}
+  .aviso{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--y);background:rgba(243,170,7,.08);color:var(--y);padding:10px 12px;border-radius:14px;font-size:14px}
+  .prod{display:flex;gap:14px;align-items:flex-start}
+  .foto{flex:none;width:84px;height:84px;border-radius:14px;object-fit:contain;background:#fff}
+  .foto.ph{background:var(--s4)}
+  .prod h2{margin:0 0 6px;font:600 19px/1.2 var(--fb)}
+  .meta{font-size:13px;color:var(--muted)}
+  .kv{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;margin-top:12px;border-radius:12px;overflow:hidden;background:var(--line)}
+  .kv div{background:#0b0b0b;padding:8px 11px;min-width:0}
+  .kv small{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+  .kv span{font:14px var(--mono);overflow-wrap:anywhere}
+  .trilha{display:grid;grid-template-columns:auto 1fr auto 1fr auto;align-items:center;margin:14px 4px 6px}
+  .passo{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:12px;color:var(--dim)}
+  .passo i{width:30px;height:30px;border-radius:50%;border:2px solid var(--line2);display:flex;align-items:center;justify-content:center;font-style:normal;font-weight:700;color:#111}
+  .passo.on{color:#fff} .passo.on i{background:var(--ok);border-color:var(--ok)}
+  .liga{height:3px;border-radius:3px;background:var(--line2);margin:0 6px 20px}
+  .liga.on{background:var(--ok)}
+  details.conv summary{cursor:pointer;color:var(--y);font-weight:600;list-style:none}
+  details.conv summary::-webkit-details-marker{display:none}
+  .msg{margin-top:10px;padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.04);font-size:14px;white-space:pre-wrap}
+  .msg.complainant{border-left:3px solid var(--y)} .msg.mediator{border-left:3px solid #5b8cff} .msg.respondent{border-left:3px solid var(--ok)}
+  .msg b{display:block;font:600 12px var(--fh);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+  .anexos{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .anexos img{width:96px;height:96px;object-fit:cover;border-radius:10px;background:var(--s4)}
+
+  /* Veredito: Perfeito (verde) · Reutilizável (cinza) · Lixo (vermelho) */
+  .vgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:10px}
+  .vbtn{display:flex;flex-direction:column;align-items:center;gap:4px;padding:16px 6px;border-radius:18px;border:2px solid;background:transparent;color:#fff;text-align:center}
+  .vbtn b{font:700 30px/1 var(--fh)}
+  .vbtn span{font:600 15px var(--fh);letter-spacing:.02em;text-transform:uppercase}
+  .vbtn small{font-size:11px;color:var(--muted);line-height:1.25}
+  .v-perfeito{border-color:rgba(62,207,110,.45);color:var(--ok)} .v-perfeito.on{background:var(--ok);border-color:var(--ok);color:#06210f}
+  .v-reutilizavel{border-color:rgba(255,255,255,.25);color:var(--cinza)} .v-reutilizavel.on{background:#8a8a8a;border-color:#8a8a8a;color:#111}
+  .v-lixo{border-color:rgba(255,90,90,.45);color:var(--bad)} .v-lixo.on{background:var(--bad);border-color:var(--bad);color:#2a0606}
+  .vbtn.on small{color:inherit;opacity:.75}
+  .quem{display:flex;gap:8px;flex-wrap:wrap}
+  .quem button{height:44px;padding:0 16px;border-radius:99px;background:rgba(255,255,255,.04);border:1px solid var(--line2);color:#fff;font:600 16px var(--fh);letter-spacing:.06em;text-transform:uppercase}
+  .quem button.on{background:#fff;color:#111;border-color:#fff}
+  .salvar{width:100%;height:60px;border:0;border-radius:16px;font:700 20px var(--fh);letter-spacing:.1em;text-transform:uppercase}
+  .salvar.v-perfeito{background:var(--ok);color:#06210f} .salvar.v-reutilizavel{background:#8a8a8a;color:#111} .salvar.v-lixo{background:var(--bad);color:#2a0606}
+  .salvar:disabled{opacity:.4;cursor:default}
+  .feito{display:flex;gap:10px;align-items:center;border-radius:14px;padding:12px;font-weight:600}
+  .feito.v-perfeito{background:var(--okbg)} .feito.v-reutilizavel{background:var(--cinzabg)} .feito.v-lixo{background:var(--badbg)}
+
+  /* Listas (Chegando / Planilha) */
+  .grupo{margin:8px 2px 0;display:flex;justify-content:space-between;font:600 14px var(--fh);letter-spacing:.12em;text-transform:uppercase;color:var(--y)}
+  .grupo span:last-child{color:var(--muted)}
+  .lista{border:1px solid rgba(255,255,255,.09);border-radius:18px;overflow:hidden}
+  .item{display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:12px;align-items:center;width:100%;padding:12px 14px;border:0;border-bottom:1px solid rgba(255,255,255,.06);background:transparent;color:#fff;text-align:left}
+  .item:last-child{border-bottom:0}
+  .item:hover{background:rgba(255,255,255,.04)}
+  .item img,.item .ph{width:52px;height:52px;border-radius:10px;object-fit:contain;background:#fff}
+  .item .ph{background:var(--s4)}
+  .item .t{font-weight:600;font-size:14px;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .pill{font:600 11px var(--fh);letter-spacing:.06em;text-transform:uppercase;border-radius:99px;padding:4px 9px;white-space:nowrap}
+  .pill.e2{background:rgba(243,170,7,.15);color:var(--y)} .pill.e1{background:rgba(91,140,255,.15);color:#8fb0ff} .pill.e0{background:rgba(255,255,255,.07);color:var(--muted)}
+  .pill.v-perfeito{background:var(--okbg);color:var(--ok);border:0} .pill.v-reutilizavel{background:var(--cinzabg);color:var(--cinza);border:0} .pill.v-lixo{background:var(--badbg);color:var(--bad);border:0}
+  .kpi3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+  .kpi3 div{border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:4px}
+  .kpi3 b{font:600 36px/1 var(--fh)}
+  .kpi3 span{font:600 13px var(--fh);letter-spacing:.08em;text-transform:uppercase}
+  .kpi3 .v-perfeito{background:var(--okbg);color:var(--ok)} .kpi3 .v-reutilizavel{background:var(--cinzabg);color:var(--cinza)} .kpi3 .v-lixo{background:var(--badbg);color:var(--bad)}
+  .filtros{display:flex;gap:8px;flex-wrap:wrap}
+  .fchip{height:36px;padding:0 14px;border-radius:99px;background:rgba(255,255,255,.03);border:1px solid var(--line2);color:#cfcfcf;font:600 13px var(--fh);letter-spacing:.08em;text-transform:uppercase}
+  .fchip.on{background:#fff;color:#111;border-color:#fff}
+  .vazio{padding:28px 16px;text-align:center;color:var(--muted)}
+  .err{border:1px solid #5c2323;color:#ff8a8a;background:rgba(255,90,90,.06);padding:14px;border-radius:14px}
+
+  /* Scanner */
+  .modal{position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;padding:14px}
+  .mbox{width:100%;max-width:460px;max-height:calc(100vh - 28px);overflow:auto;display:flex;flex-direction:column}
+  .mhead{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--line);font:600 16px var(--fh);letter-spacing:.12em;text-transform:uppercase}
+  .mhead button{background:none;border:0;color:var(--muted);font-size:26px;line-height:1}
+  .mbody{padding:16px;display:flex;flex-direction:column;gap:12px}
+  #cam{min-height:220px;background:#0d0d0d}
+  #cam video{width:100% !important;display:block}
+  .toast{position:fixed;left:50%;transform:translateX(-50%);z-index:40;padding:12px 18px;font-size:14px;max-width:calc(100vw - 32px)}
+  @media (max-width:560px){
+    header{flex-wrap:wrap}
+    .seg{width:100%} .seg a{flex:1;text-align:center}
+  }
+  @media (max-width:420px){ .h1{font-size:30px} }
+</style>
+<link rel="stylesheet" href="kx-ui.css" />
+</head>
+<body class="kx-dev">
+
+<header class="kx-glass kx-topo">
+  <div class="brand">
+    <div class="ico"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F3AA07" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></div>
+    <div><b>Devoluções</b><span>Kaixeiro</span></div>
+  </div>
+  <nav class="seg" id="seg">
+    <a href="#/" data-r="">Conferir</a><a href="#/chegando" data-r="chegando">Chegando</a><a href="#/planilha" data-r="planilha">Planilha</a>
+  </nav>
+</header>
+
+<div id="view"></div>
+
+<nav class="tabbar kx-glass" aria-label="Abas">
+  <a href="index.html" aria-label="Bancada Flex / Agência"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2M7 12h10"/></svg><span>Bancada</span></a>
+  <a href="mapa.html" aria-label="Mapa do estoque"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"/></svg><span>Mapa</span></a>
+  <a href="full.html" aria-label="Scanner Full"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8 12 3 3 8v8l9 5 9-5V8zM3 8l9 5 9-5M12 13v8"/></svg><span>Full</span></a>
+  <a href="devolucoes.html#/" class="active" aria-label="Devoluções" onclick="event.preventDefault();go('#/')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg><span>Devoluções</span></a>
+</nav>
+
+<!-- Câmera para a etiqueta de devolução (QR ou código de barras) -->
+<div class="modal hidden" id="scanModal">
+  <div class="mbox">
+    <div class="mhead"><span>Bipar etiqueta de devolução</span><button onclick="closeScanner()" aria-label="Fechar">×</button></div>
+    <div id="cam"></div>
+    <div class="mbody">
+      <div id="camErr" class="err hidden"></div>
+      <form class="linha" onsubmit="event.preventDefault();lerManual()">
+        <input id="manual" class="minput" placeholder="Ou digite / use o leitor USB" autocomplete="off" inputmode="numeric">
+        <button class="btn" type="submit">Ler</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="toast kx-glass hidden" id="toast"></div>
+
+<script>
+const API = "/api/devolucoes";
+const $ = (id) => document.getElementById(id);
+const show = (id) => $(id).classList.remove("hidden");
+const hide = (id) => $(id).classList.add("hidden");
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+const brl = (v) => (v == null ? "—" : Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }));
+const dia = (d) => (d ? new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) : "—");
+const diaHora = (d) => (d ? new Date(d).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—");
+const go = (h) => { if (location.hash === h) route(); else location.hash = h; };
+function toast(msg, ms = 2600) { const t = $("toast"); t.textContent = msg; show("toast"); clearTimeout(toast._t); toast._t = setTimeout(() => hide("toast"), ms); }
+async function apiGet(qs) {
+  const r = await fetch(API + qs);
+  const d = await r.json().catch(() => ({ ok: false, error: "Resposta inválida do servidor (" + r.status + ")" }));
+  if (!d.ok) throw new Error(d.error || "Erro " + r.status);
+  return d;
+}
+let actx;
+function beep(ok) {
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.frequency.value = ok ? 1250 : 220; o.type = ok ? "sine" : "square";
+    g.gain.value = 0.08; o.connect(g); g.connect(actx.destination);
+    o.start(); o.stop(actx.currentTime + (ok ? 0.12 : 0.35));
+  } catch {}
+  if (navigator.vibrate) navigator.vibrate(ok ? 60 : [120, 60, 120]);
+}
+
+const VER = {
+  perfeito: { t: "Perfeito", ic: "✓", d: "Volta pro estoque" },
+  reutilizavel: { t: "Reutilizável", ic: "↻", d: "Avariado, dá pra usar" },
+  lixo: { t: "Lixo", ic: "✕", d: "Descartar" },
+};
+const EQUIPE = ["Douglas", "Ber", "Wilson", "Cássia", "Giulia"];
+const ENVIO_TXT = { pending: "Aguardando a etiqueta", ready_to_ship: "Etiqueta gerada, ainda não postada", shipped: "A caminho", delivered: "Chegou (entregue para vocês)" };
+const PASSOS = ["Etiqueta", "A caminho", "Chegou"];
+const D = { rel: {}, sel: null, obs: "", quem: null, aberto: null, periodo: "7" };
+try { D.quem = localStorage.getItem("kxdev.quem"); } catch {}
+
+// ---------- roteamento ----------
+// Igual ao Scanner Full: desenha na hora com o que já tem (memória ou cache da aba) e atualiza
+// por trás; a rolagem de cada tela volta para o mesmo ponto.
+if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+const ROLAGEM = {};
+window.addEventListener("hashchange", (ev) => { ROLAGEM[new URL(ev.oldURL).hash || "#/"] = window.scrollY; route(); });
+const carregando = () => { $("view").innerHTML = '<div class="kx-load"><i></i><i></i><i></i><i></i></div>'; };
+const rolarPara = (h) => window.scrollTo(0, ROLAGEM[h] || 0);
+function redesenhar(fn) {
+  const y = window.scrollY, ativo = document.activeElement, id = ativo && ativo.id, pos = ativo && ativo.selectionStart;
+  fn();
+  window.scrollTo(0, y);
+  const novo = id && $(id);
+  if (novo && novo !== ativo) { novo.focus({ preventScroll: true }); if (pos != null) try { novo.setSelectionRange(pos, pos); } catch {} }
+}
+const erroView = (msg) => { $("view").innerHTML = `<main><div class="err">${esc(msg)}</div><a href="#/">← Voltar</a></main>`; };
+
+// Busca com cache: mostra o guardado na hora, atualiza por trás e só redesenha se mudou.
+async function swr(chave, qs, desenhar, n, h) {
+  const velho = D[chave] || kxCache.get("dev." + chave);
+  if (velho) { D[chave] = velho; desenhar(velho); rolarPara(h); } else carregando();
+  try {
+    const novo = await apiGet(qs);
+    if (n !== rotaN) return;
+    const mudou = JSON.stringify(novo) !== JSON.stringify(velho);
+    D[chave] = novo; if (mudou) kxCache.set("dev." + chave, novo);
+    if (!velho) { desenhar(novo); rolarPara(h); } else if (mudou) redesenhar(() => desenhar(novo));
+  } catch (e) {
+    if (n !== rotaN) return;
+    if (velho) toast("Sem atualizar: " + e.message, 4000); else erroView(e.message);
+  }
+}
+
+let rotaN = 0;
+function route() {
+  closeScanner();
+  const n = ++rotaN, h = location.hash || "#/";
+  const parts = h.replace(/^#\/?/, "").split("/").filter(Boolean);
+  const r = parts[0] || "";
+  document.querySelectorAll("#seg a").forEach((a) => a.classList.toggle("on", a.dataset.r === (r === "d" ? "" : r)));
+  if (r === "d" && parts[1]) return abrirRelatorio(decodeURIComponent(parts.slice(1).join("/")), n, h);
+  if (r === "chegando") return swr("chegando", "?lista=chegando", renderChegando, n, h);
+  if (r === "planilha") return swr("conferidas", "?lista=conferidas", renderPlanilha, n, h);
+  renderConferir(); rolarPara(h);
+}
+
+// ---------- Conferir ----------
+function renderConferir() {
+  $("view").innerHTML = `
+  <main>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <span class="eyebrow">Devoluções</span>
+      <h1 class="h1">Conferir devolução</h1>
+      <p class="sub">Bipe a etiqueta do pacote que voltou: abre o que aconteceu com a venda e você dá o veredito.</p>
+    </div>
+    <button class="scan-big" onclick="openScanner()">
+      <span class="ic"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2M7 12h10"/></svg></span>
+      <span><b>Escanear a etiqueta</b><small>QR ou código de barras da etiqueta de devolução</small></span>
+    </button>
+    <form class="card kx-surface" style="display:flex;flex-direction:column;gap:10px" onsubmit="event.preventDefault();buscar()">
+      <span class="lbl">Número da venda</span>
+      <div class="linha">
+        <input id="codigo" class="minput" placeholder="Cole ou digite (2000...)" autocomplete="off" inputmode="numeric">
+        <button class="btn" type="submit">Buscar</button>
+      </div>
+      <span class="meta">Também aceita o número da reclamação ou do envio de devolução.</span>
+    </form>
+  </main>`;
+  if (D.reabrir) { D.reabrir = false; openScanner(); } else kxPreload(QR_LIB);
+}
+function buscar() { const v = $("codigo").value.trim(); if (v) abrirCodigo(v); }
+// QR da etiqueta é um JSON {"id": <envio>}: usa só o id (endereço mais limpo e cache melhor).
+function codigoLimpo(raw) {
+  const s = String(raw || "").trim();
+  try { const j = JSON.parse(s); if (j && j.id) return String(j.id); } catch {}
+  return s;
+}
+const abrirCodigo = (raw) => go("#/d/" + encodeURIComponent(codigoLimpo(raw)));
+
+// ---------- Relatório ----------
+async function abrirRelatorio(codigo, n, h) {
+  const velho = D.rel[codigo] || kxCache.get("dev.rel." + codigo);
+  const desenhar = (r) => {
+    if (D.aberto !== r.claim_id) { D.aberto = r.claim_id; D.sel = r.salvo?.veredito || null; D.obs = r.salvo?.observacao || ""; }
+    renderRelatorio(r);
+  };
+  if (velho) { D.rel[codigo] = velho; desenhar(velho); rolarPara(h); }
+  else $("view").innerHTML = '<main><div class="card kx-surface" style="text-align:center;color:var(--muted)">Buscando a devolução no Mercado Livre…</div><div class="kx-load" style="padding:0"><i></i><i></i><i></i></div></main>';
+  try {
+    const r = await apiGet("?codigo=" + encodeURIComponent(codigo));
+    if (n !== rotaN) return;
+    const mudou = JSON.stringify(r) !== JSON.stringify(velho);
+    D.rel[codigo] = D.rel[r.claim_id] = r;
+    if (mudou) { kxCache.set("dev.rel." + codigo, r); kxCache.set("dev.rel." + r.claim_id, r); }
+    if (!velho) { beep(true); desenhar(r); window.scrollTo(0, 0); } else if (mudou) redesenhar(() => desenhar(r));
+  } catch (e) {
+    if (n !== rotaN) return;
+    if (velho) return toast("Sem atualizar: " + e.message, 4000);
+    beep(false);
+    $("view").innerHTML = `<main><div class="err">${esc(e.message)}</div><button class="btn" onclick="go('#/');openScanner()">Bipar outra etiqueta</button></main>`;
+  }
+}
+
+function renderRelatorio(r) {
+  const e = r.envio, et = e ? e.etapa : -1;
+  const passo = (k) => `<div class="passo ${k <= et ? "on" : ""}"><i>${k <= et ? "✓" : ""}</i><span>${PASSOS[k]}</span></div>`;
+  const liga = (k) => `<b class="liga ${k < et ? "on" : ""}"></b>`;
+  $("view").innerHTML = `
+  <main>
+    <a class="eyebrow" href="#/" style="display:flex;align-items:center;gap:6px">← Bipar outra</a>
+
+    <section class="card kx-surface">
+      <div class="chips">
+        <span class="chip ${r.situacao === "Comprador ganhou" ? "bad" : r.situacao === "Kaixeiro ganhou" ? "ok" : "y"}">${esc(r.situacao)}</span>
+        <span class="chip">${r.tipo === "returns" ? "Devolução" : "Reclamação"}</span>
+        ${r.motivo_codigo ? `<span class="chip mono">${esc(r.motivo_codigo)}</span>` : ""}
+        <span class="chip">Aberta ${diaHora(r.aberta_em)}</span>
+      </div>
+      <div class="lbl" style="margin-top:14px">O que aconteceu</div>
+      ${r.resumo_ml ? `<p class="oque">${esc(r.resumo_ml)}</p><span class="fonte">✦ Resumo do Mercado Livre</span>`
+        : `<p class="oque" style="color:var(--muted);font-size:17px">O ML não mandou o resumo desta reclamação${r.motivo_familia ? ` (motivo: ${esc(r.motivo_familia)})` : ""}. Veja a conversa abaixo.</p>`}
+    </section>
+
+    ${r.revisar_ate ? `<div class="aviso"><span>⏱</span><span>Revise esta devolução no Mercado Livre até <b>${diaHora(r.revisar_ate)}</b>. Sem resposta, o ML entende que chegou como esperado.</span></div>` : ""}
+    ${e?.para_full ? `<div class="aviso"><span>ℹ</span><span>Esta devolução vai para o <b>CD do Full</b>, não para a bancada.</span></div>` : ""}
+
+    ${r.produtos.map((p) => `
+    <section class="card kx-surface">
+      <div class="lbl" style="margin-bottom:10px">Produto</div>
+      <div class="prod">
+        ${p.foto ? `<img class="foto" src="${esc(p.foto)}" alt="" decoding="async">` : '<div class="foto ph"></div>'}
+        <div style="min-width:0">
+          <h2>${esc(p.titulo)}</h2>
+          ${p.variacao ? `<div class="meta">${esc(p.variacao)}</div>` : ""}
+          <div class="chips" style="margin-top:8px">
+            <span class="chip y">${p.devolvidos} de ${p.vendidos} un. devolvida(s)</span>
+            <span class="chip">Venda ${brl(p.valor)}</span>
+          </div>
+        </div>
+      </div>
+      <div class="kv">
+        <div><small>SKU</small><span>${esc(p.sku || "—")}</span></div>
+        <div><small>Anúncio</small><span>${p.permalink ? `<a href="${esc(p.permalink)}" target="_blank" rel="noopener">${esc(p.item_id)} ↗</a>` : esc(p.item_id)}</span></div>
+        <div><small>Venda</small><span>${esc(r.order_id || "—")}</span></div>
+        <div><small>Reclamação</small><span>${esc(r.claim_id)}</span></div>
+        <div style="grid-column:1/-1"><small>Comprador</small><span>${esc(r.comprador || "—")}</span></div>
+      </div>
+    </section>`).join("")}
+
+    <section class="card kx-surface">
+      <div class="lbl">Devolução</div>
+      ${e ? `<div class="trilha">${passo(0)}${liga(0)}${passo(1)}${liga(1)}${passo(2)}</div>
+        <div style="font-weight:600">${esc(ENVIO_TXT[e.status] || e.status)}</div>
+        <div class="meta">Envio ${esc(e.id)}${e.rastreio ? ` · rastreio <span class="mono">${esc(e.rastreio)}</span>` : ""}</div>`
+        : `<p class="meta" style="margin:8px 0 0">Sem envio de devolução nesta reclamação.</p>`}
+    </section>
+
+    ${r.conversa.length ? `
+    <details class="card kx-surface conv">
+      <summary>Ver conversa completa (${r.conversa.length}) ▾</summary>
+      ${r.conversa.map((m) => `<div class="msg ${esc(m.papel)}"><b>${esc(m.quem)} · ${diaHora(m.data)}</b>${esc(m.texto)}${m.anexos.length ? `<div class="anexos">${m.anexos.map((f) => {
+        const u = API + "?anexo=" + encodeURIComponent(r.claim_id) + "&arquivo=" + encodeURIComponent(f);
+        return `<a href="${u}" target="_blank" rel="noopener"><img src="${u}" alt="Foto do comprador" loading="lazy" decoding="async"></a>`;
+      }).join("")}</div>` : ""}</div>`).join("")}
+    </details>` : ""}
+
+    <section class="card kx-surface" id="vered">${vereditoHtml(r)}</section>
+  </main>`;
+}
+
+// Escolher veredito e quem conferiu troca só este bloco (não redesenha a página).
+function vereditoHtml(r) {
+  const s = r.salvo;
+  return `
+    <div class="lbl">Seu veredito</div>
+    ${s ? `<div class="feito v-${esc(s.veredito)}" style="margin-top:10px"><span style="font-size:22px">${VER[s.veredito]?.ic || ""}</span><span>Já conferido como <b>${esc(VER[s.veredito]?.t || s.veredito)}</b>${s.responsavel ? ` por ${esc(s.responsavel)}` : ""} em ${diaHora(s.conferido_em)}${s.observacao ? `<br><span class="meta">${esc(s.observacao)}</span>` : ""}</span></div>` : ""}
+    <p class="meta" style="margin:8px 0 0">Depois de conferir o produto na mão, escolha:</p>
+    <div class="vgrid">${Object.entries(VER).map(([k, v]) => `
+      <button class="vbtn v-${k} ${D.sel === k ? "on" : ""}" onclick="escolher('${k}')"><b>${v.ic}</b><span>${v.t}</span><small>${v.d}</small></button>`).join("")}</div>
+    ${D.sel ? `
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px">
+      <textarea id="obs" class="minput" placeholder="Observação (opcional): ex. caixa amassada, lacre rompido, faltou acessório" oninput="D.obs=this.value">${esc(D.obs)}</textarea>
+      <span class="lbl">Quem conferiu</span>
+      <div class="quem">${EQUIPE.map((p) => `<button class="${D.quem === p ? "on" : ""}" onclick="escolherQuem('${p}')">${esc(p)}</button>`).join("")}</div>
+      <button class="salvar v-${D.sel}" id="salvarBtn" ${D.quem ? "" : "disabled"} onclick="salvar()">${s ? "Atualizar" : "Salvar"} como ${VER[D.sel].t}</button>
+      ${D.quem ? "" : '<span class="meta" style="text-align:center">Escolha quem conferiu para salvar.</span>'}
+    </div>` : ""}`;
+}
+const relAtual = () => D.rel[D.aberto];
+function escolher(k) { D.sel = k; $("vered").innerHTML = vereditoHtml(relAtual()); }
+function escolherQuem(p) {
+  D.quem = p; try { localStorage.setItem("kxdev.quem", p); } catch {}
+  $("vered").innerHTML = vereditoHtml(relAtual());
+}
+async function salvar() {
+  const r = relAtual(), p = r.produtos[0] || {}, btn = $("salvarBtn");
+  btn.disabled = true; btn.textContent = "Salvando…";
+  try {
+    const res = await fetch(API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
+      acao: "veredito", claim_id: r.claim_id, order_id: r.order_id, envio_id: r.envio?.id, item_id: p.item_id, titulo: p.titulo,
+      sku: p.sku, foto: p.foto, quantidade: p.devolvidos, valor: p.valor, motivo: r.resumo_ml,
+      veredito: D.sel, observacao: D.obs, responsavel: D.quem }) }).then((x) => x.json());
+    if (!res.ok) throw new Error(res.error || "Falha ao salvar");
+    r.salvo = res.salvo;
+    for (const k of Object.keys(D.rel)) if (D.rel[k].claim_id === r.claim_id) kxCache.set("dev.rel." + k, r);
+    // Listas mudaram: a próxima abertura busca de novo.
+    D.conferidas = null; kxCache.set("dev.conferidas", null);
+    if (D.chegando) { const x = D.chegando.devolucoes.find((c) => c.claim_id === r.claim_id); if (x) { x.veredito = D.sel; kxCache.set("dev.chegando", D.chegando); } }
+    beep(true);
+    toast(`Salvo como ${VER[D.sel].t}.`);
+    D.aberto = null;
+    D.reabrir = true; go("#/"); // a tela Conferir já abre a câmera para a próxima etiqueta
+  } catch (e) { btn.disabled = false; btn.textContent = "Tentar de novo"; toast(e.message, 5000); }
+}
+
+// ---------- Chegando ----------
+function linhaDev(x) {
+  const st = x.veredito ? `<span class="pill v-${esc(x.veredito)}">${esc(VER[x.veredito]?.t || x.veredito)}</span>`
+    : `<span class="pill e${x.etapa}">${x.etapa === 2 ? "Chegou" : x.etapa === 1 ? "A caminho" : "Etiqueta"}</span>`;
+  return `<button class="item" onclick="go('#/d/${esc(x.claim_id)}')">
+    ${x.foto ? `<img src="${esc(x.foto)}" alt="" loading="lazy" decoding="async">` : '<span class="ph"></span>'}
+    <span style="min-width:0"><span class="t">${esc(x.titulo || "Produto")}</span><span class="meta">${x.quantidade ? x.quantidade + " un. · " : ""}aberta ${dia(x.aberta_em)} · venda ${esc(x.order_id)}</span></span>
+    ${st}</button>`;
+}
+function renderChegando(d) {
+  const l = d.devolucoes || [];
+  const grupos = [
+    ["Chegou · falta conferir", l.filter((x) => !x.veredito && x.etapa === 2)],
+    ["A caminho", l.filter((x) => !x.veredito && x.etapa === 1)],
+    ["Etiqueta gerada", l.filter((x) => !x.veredito && x.etapa === 0)],
+    ["Já conferidas", l.filter((x) => x.veredito)],
+  ].filter(([, g]) => g.length);
+  $("view").innerHTML = `
+  <main>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <span class="eyebrow">Devoluções · últimos 45 dias</span>
+      <h1 class="h1">Chegando</h1>
+      <p class="sub">Devoluções que voltam para a Kaixeiro (as do Full vão para o CD do ML e não aparecem aqui).</p>
+    </div>
+    ${grupos.length ? grupos.map(([t, g]) => `<div class="grupo"><span>${t}</span><span>${g.length}</span></div><div class="lista kx-surface">${g.map(linhaDev).join("")}</div>`).join("")
+      : '<div class="vazio card kx-surface">Nenhuma devolução vindo para cá.</div>'}
+  </main>`;
+}
+
+// ---------- Planilha ----------
+const PERIODOS = [["1", "Hoje"], ["7", "7 dias"], ["30", "30 dias"], ["0", "Tudo"]];
+function filtradas() {
+  const l = D.conferidas?.conferidas || [];
+  if (D.periodo === "0") return l;
+  const ini = new Date(); ini.setHours(0, 0, 0, 0); ini.setDate(ini.getDate() - (Number(D.periodo) - 1));
+  return l.filter((x) => new Date(x.conferido_em) >= ini);
+}
+function renderPlanilha() {
+  const l = filtradas();
+  const n = (k) => l.filter((x) => x.veredito === k).length;
+  $("view").innerHTML = `
+  <main>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <span class="eyebrow">Devoluções</span>
+      <h1 class="h1">Planilha</h1>
+    </div>
+    <div class="filtros">${PERIODOS.map(([k, t]) => `<button class="fchip ${D.periodo === k ? "on" : ""}" onclick="D.periodo='${k}';renderPlanilha()">${t}</button>`).join("")}</div>
+    <div class="kpi3">${Object.entries(VER).map(([k, v]) => `<div class="v-${k}"><b>${n(k)}</b><span>${v.ic} ${v.t}</span></div>`).join("")}</div>
+    <button class="btn" onclick="baixarCsv()" ${l.length ? "" : "disabled"}>⬇ Baixar planilha (Excel)</button>
+    <span class="meta">${l.length} devolução(ões) · ${l.reduce((a, x) => a + (x.quantidade || 0), 0)} unidade(s) · total vendido ${brl(l.reduce((a, x) => a + (Number(x.valor) || 0) * (x.quantidade || 1), 0))}</span>
+    ${l.length ? `<div class="lista kx-surface">${l.map((x) => `<button class="item" onclick="go('#/d/${esc(x.claim_id)}')">
+      ${x.foto ? `<img src="${esc(x.foto)}" alt="" loading="lazy" decoding="async">` : '<span class="ph"></span>'}
+      <span style="min-width:0"><span class="t">${esc(x.titulo || "Produto")}</span><span class="meta">${diaHora(x.conferido_em)}${x.responsavel ? " · " + esc(x.responsavel) : ""}${x.observacao ? " · " + esc(x.observacao) : ""}</span></span>
+      <span class="pill v-${esc(x.veredito)}">${esc(VER[x.veredito]?.t || x.veredito)}</span></button>`).join("")}</div>`
+      : '<div class="vazio card kx-surface">Nada conferido neste período.</div>'}
+  </main>`;
+}
+// CSV com ";" e BOM: o Excel abre direto com acentos certos.
+function baixarCsv() {
+  const cel = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const cab = ["Conferido em", "Veredito", "Produto", "SKU", "Quantidade", "Valor unitário", "Motivo (ML)", "Observação", "Conferido por", "Venda", "Reclamação"];
+  const linhas = filtradas().map((x) => [diaHora(x.conferido_em), VER[x.veredito]?.t || x.veredito, x.titulo, x.sku, x.quantidade,
+    x.valor == null ? "" : String(x.valor).replace(".", ","), x.motivo, x.observacao, x.responsavel, x.order_id, x.claim_id].map(cel).join(";"));
+  const blob = new Blob(["﻿" + [cab.map(cel).join(";"), ...linhas].join("\r\n")], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = `devolucoes-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+// ---------- Câmera ----------
+let cam = null, camOn = false, lastCode = "", lastAt = 0;
+async function openScanner() {
+  $("manual").value = ""; hide("camErr"); show("scanModal");
+  setTimeout(() => $("manual").focus({ preventScroll: true }), 50);
+  if (camOn) return;
+  try {
+    await kxLoad(QR_LIB);
+    if ($("scanModal").classList.contains("hidden")) return; // fechou enquanto carregava
+    const F = Html5QrcodeSupportedFormats;
+    cam = cam || new Html5Qrcode("cam", { verbose: false,
+      formatsToSupport: [F.QR_CODE, F.CODE_128, F.CODE_39, F.EAN_13, F.ITF, F.DATA_MATRIX, F.PDF_417],
+      experimentalFeatures: { useBarCodeDetectorIfSupported: true } });
+    camOn = true;
+    await cam.start({ facingMode: "environment" },
+      { fps: 12, qrbox: (w, h) => ({ width: Math.floor(w * 0.82), height: Math.floor(Math.min(h * 0.7, 260)) }) },
+      (t) => { const n = Date.now(); if (t === lastCode && n - lastAt < 2500) return; lastCode = t; lastAt = n; ler(t); }, () => {});
+  } catch (e) {
+    camOn = false;
+    $("camErr").textContent = "Câmera indisponível (" + (e.message || e) + "). Digite o número da venda ou use o leitor USB.";
+    show("camErr");
+  }
+}
+async function closeScanner() {
+  hide("scanModal");
+  if (cam && camOn) { try { await cam.stop(); } catch {} camOn = false; }
+}
+async function ler(code) { await closeScanner(); abrirCodigo(code); }
+function lerManual() { const v = $("manual").value.trim(); if (v) ler(v); }
+
+// Leitor USB/Bluetooth: ele "digita" rápido e termina com Enter.
+let kb = "", kbAt = 0;
+document.addEventListener("keydown", (ev) => {
+  if (!$("scanModal").classList.contains("hidden")) return;
+  if (/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || "")) return;
+  const now = Date.now();
+  if (now - kbAt > 80) kb = "";
+  kbAt = now;
+  if (ev.key === "Enter") { const c = kb; kb = ""; if (c.length >= 8) abrirCodigo(c); return; }
+  if (ev.key.length === 1) kb += ev.key;
+});
+
+route();
+</script>
+</body>
+</html>
