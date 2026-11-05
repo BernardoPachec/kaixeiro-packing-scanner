@@ -49,16 +49,13 @@ const send = (res, code, obj) => {
 // ---- Leitura ----------------------------------------------------------------
 
 async function listar() {
-  const [envios, itens] = await Promise.all([
+  const [envios, itens, div] = await Promise.all([
     sbSelect("full_envios", "select=*&order=importado_em.desc&limit=100"),
     // Sem a coluna "alerta" (SQL de 16/10 ainda não rodado) a lista continua funcionando.
     sbSelect("full_envio_itens", "select=frete,unidades,conferidas,alerta&limit=10000")
       .catch(() => sbSelect("full_envio_itens", "select=frete,unidades,conferidas&limit=10000")),
+    sbSelect("full_leituras", "select=frete&resultado=eq.divergente&order=criado_em.desc&limit=5000"),
   ]);
-  const div = await sbSelect(
-    "full_leituras",
-    "select=frete&resultado=eq.divergente&order=criado_em.desc&limit=5000"
-  );
   const comDivergencia = new Set(div.map((d) => d.frete));
   return envios.map((e) => {
     const linhas = itens.filter((i) => i.frete === e.frete);
@@ -74,52 +71,48 @@ async function listar() {
   });
 }
 
+// As consultas vão em duas levas paralelas (antes eram ~8 em sequência, e voltar para a
+// Tela 02 esperava todas): 1) o que só depende do frete, 2) o que depende das linhas.
 async function detalhe(frete) {
-  const [envio] = await sbSelect("full_envios", `frete=eq.${enc(frete)}&select=*`);
+  const [[envio], itens, leituras, comNome] = await Promise.all([
+    sbSelect("full_envios", `frete=eq.${enc(frete)}&select=*`),
+    sbSelect("full_envio_itens", `frete=eq.${enc(frete)}&select=*&order=sku.asc`),
+    sbSelect("full_leituras", `frete=eq.${enc(frete)}&select=*&order=criado_em.desc&limit=50`),
+    // Quem fez cada produto (para o filtro "Feito por" da Tela 02): nomes de todas as leituras.
+    sbSelect("full_leituras",
+      `frete=eq.${enc(frete)}&responsavel=not.is.null&resultado=in.(ok,sem_leitura,manual)&select=inv,responsavel&limit=10000`),
+  ]);
   if (!envio) return null;
-  const itens = await sbSelect("full_envio_itens", `frete=eq.${enc(frete)}&select=*&order=sku.asc`);
-  const leituras = await sbSelect(
-    "full_leituras",
-    `frete=eq.${enc(frete)}&select=*&order=criado_em.desc&limit=50`
-  );
   // Checklist de embalagem por SKU (batoque, fita, flanela...). Sem cadastro = padrão da tela.
   const skus = [...new Set(itens.map((i) => i.sku).filter(Boolean))];
-
   // Marca de reserva (item importado antes de guardar marca): catálogo do Mapa do estoque.
   const semMarca = [...new Set(itens.filter((i) => !i.marca && i.sku).map((i) => i.sku))];
-  if (semMarca.length) {
-    try {
-      const cat = await sbSelect("catalogo_produtos", `sku=in.(${enc(semMarca.map((c) => `"${c}"`).join(","))})&select=sku,marca`);
-      for (const it of itens) if (!it.marca) it.marca = cat.find((c) => c.sku === it.sku)?.marca || null;
-    } catch (e) { /* catálogo indisponível */ }
-  }
-
   // Códigos de barras ensinados na bancada ("este código é deste produto") entram na leitura.
   const chavesCod = [...skus, ...itens.map((i) => i.item_id).filter(Boolean)];
-  if (chavesCod.length) {
-    try {
-      const cods = await sbSelect("produto_codigos", `chave=in.(${enc(chavesCod.map((c) => `"${c}"`).join(","))})&select=chave,codigo`);
-      for (const it of itens) {
-        const extra = cods.filter((c) => c.chave === it.sku || c.chave === it.item_id).map((c) => c.codigo);
-        if (extra.length) it.gtins = [...new Set([...(it.gtins || []), ...extra])];
-      }
-    } catch (e) { /* tabela ainda não criada */ }
+  const invs = itens.map((i) => `"${i.inv}"`).join(",");
+  const lista = skus.map((s) => `"${s.replace(/"/g, "")}"`).join(",");
+
+  const [cat, cods, cks, cksEtq] = await Promise.all([
+    semMarca.length
+      ? sbSelect("catalogo_produtos", `sku=in.(${enc(semMarca.map((c) => `"${c}"`).join(","))})&select=sku,marca`).catch(() => []) // catálogo indisponível
+      : [],
+    chavesCod.length
+      ? sbSelect("produto_codigos", `chave=in.(${enc(chavesCod.map((c) => `"${c}"`).join(","))})&select=chave,codigo`).catch(() => []) // tabela ainda não criada
+      : [],
+    skus.length ? sbSelect("full_checklists", `sku=in.(${enc(lista)})&select=sku,passos`) : [],
+    // Checklist por etiqueta (prioridade sobre o do SKU): o que vai em cada anúncio.
+    invs ? sbSelect("full_checklists_etq", `inv=in.(${enc(invs)})&select=inv,passos,kit,revisado`) : [],
+  ]);
+  for (const it of itens) {
+    if (!it.marca) it.marca = cat.find((c) => c.sku === it.sku)?.marca || null;
+    const extra = cods.filter((c) => c.chave === it.sku || c.chave === it.item_id).map((c) => c.codigo);
+    if (extra.length) it.gtins = [...new Set([...(it.gtins || []), ...extra])];
   }
   const checklists = {};
-  if (skus.length) {
-    const lista = skus.map((s) => `"${s.replace(/"/g, "")}"`).join(",");
-    for (const c of await sbSelect("full_checklists", `sku=in.(${enc(lista)})&select=sku,passos`)) checklists[c.sku] = c.passos || [];
-  }
-  // Checklist por etiqueta (prioridade sobre o do SKU): o que vai em cada anúncio.
+  for (const c of cks) checklists[c.sku] = c.passos || [];
   const checklists_etq = {};
-  const invs = itens.map((i) => `"${i.inv}"`).join(",");
-  if (invs) {
-    for (const c of await sbSelect("full_checklists_etq", `inv=in.(${enc(invs)})&select=inv,passos,kit,revisado`)) checklists_etq[c.inv] = c;
-  }
-  // Quem fez cada produto (para o filtro "Feito por" da Tela 02): nomes de todas as leituras.
+  for (const c of cksEtq) checklists_etq[c.inv] = c;
   const feitos_por = {};
-  const comNome = await sbSelect("full_leituras",
-    `frete=eq.${enc(frete)}&responsavel=not.is.null&resultado=in.(ok,sem_leitura,manual)&select=inv,responsavel&limit=10000`);
   for (const l of comNome) {
     const nomes = (feitos_por[l.inv] = feitos_por[l.inv] || []);
     for (const n of String(l.responsavel).split(",").map((s) => s.trim()).filter(Boolean)) if (!nomes.includes(n)) nomes.push(n);

@@ -12,7 +12,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   /* Layout do protótipo "Mapa do estoque" (Claude Design) com o visual Kaixeiro:
      preto, amarelo #F3AA07 e branco, Barlow, cantos retos, igual ao Scanner Full. */
@@ -131,10 +131,7 @@
   .cat .prod.on{background:var(--ytint);box-shadow:inset 3px 0 0 var(--y)}
   .toast{position:fixed;left:50%;bottom:100px;transform:translateX(-50%);z-index:40;background:var(--s4);border:1px solid var(--line2);padding:12px 18px;font-size:14px;max-width:calc(100vw - 32px)}
 
-  /* Barra de abas (igual à da bancada) */
-  .tabbar{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:20;display:flex;gap:4px;background:rgba(24,24,24,.6);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border:1px solid rgba(255,255,255,.14);padding:7px;border-radius:26px;box-shadow:0 8px 28px rgba(0,0,0,.45)}
-  .tabbar a{color:rgba(255,255,255,.55);font-size:22px;line-height:1;width:50px;height:50px;border-radius:19px;display:flex;align-items:center;justify-content:center;text-decoration:none}
-  .tabbar a.active{background:var(--y);color:#000}
+  /* Barra de abas e vidro: kx-ui.css */
 
   @media (max-width:760px){
     .topbar{grid-template-columns:minmax(0,1fr);padding:10px 16px}
@@ -145,10 +142,12 @@
     .planta{padding:14px}
   }
 </style>
+<link rel="stylesheet" href="kx-ui.css" />
+<script src="kx-app.js"></script>
 </head>
-<body>
+<body class="kx-mapa">
 
-<header class="topbar">
+<header class="topbar kx-glass kx-topo">
   <div class="brand">
     <div class="ico"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F3AA07" stroke-width="2" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18"></rect><path d="M3 12h18M9 12v9M15 12v9"></path></svg></div>
     <div><b>Mapa do estoque</b><span>Kaixeiro</span></div>
@@ -163,17 +162,17 @@
         <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>
       </button>
     </div>
-    <div class="drop hidden" id="drop"></div>
+    <div class="drop kx-glass hidden" id="drop"></div>
   </div>
-  <div class="topright"><a href="index.html">← Bancada</a></div>
+  <div class="topright"></div>
 </header>
 
 <main id="main"></main>
 
-<nav class="tabbar" aria-label="Abas">
-  <a href="index.html" title="Bancada Flex / Agência" aria-label="Bancada Flex / Agência">📷</a>
-  <a href="mapa.html" class="active" title="Mapa do estoque" aria-label="Mapa do estoque">🗺️</a>
-  <a href="full.html" title="Scanner Full" aria-label="Scanner Full">🏬</a>
+<nav class="tabbar kx-glass" aria-label="Abas">
+  <a href="index.html" aria-label="Bancada Flex / Agência"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2M7 12h10"/></svg><span>Bancada</span></a>
+  <a href="mapa.html" class="active" aria-label="Mapa do estoque"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"/></svg><span>Mapa</span></a>
+  <a href="full.html" aria-label="Scanner Full"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8 12 3 3 8v8l9 5 9-5V8zM3 8l9 5 9-5M12 13v8"/></svg><span>Full</span></a>
 </nav>
 
 <!-- Adicionar / editar produto num local -->
@@ -184,7 +183,7 @@
   </div>
 </div>
 
-<div class="toast hidden" id="toast"></div>
+<div class="toast kx-glass hidden" id="toast"></div>
 
 <script>
 // ---------- Planta (do protótipo) ----------
@@ -524,11 +523,13 @@ async function excluir() {
 }
 
 // ---------- carregar ----------
+// Mostra na hora o mapa guardado nesta aba e atualiza por trás (voltar para o Mapa não espera o servidor).
 async function carregar() {
-  try { M.itens = (await apiGet()).locais || []; }
+  try { M.itens = (await apiGet()).locais || []; kxCache.set("mapa", M.itens); }
   catch (e) { toast("Não carregou o mapa: " + e.message, 6000); }
   render(); renderDrop();
 }
+M.itens = kxCache.get("mapa") || [];
 render();
 carregar();
 </script>

@@ -1,0 +1,173 @@
+/* kx-ui.css — camada visual compartilhada (Bancada, Mapa, Scanner Full).
+   Inspirado no template Wuizt (Framer): fundo escuro com brilho vindo do topo, grade de
+   "pixels" que some para baixo, cartões translúcidos e botões com brilho. A cor do brilho
+   é o amarelo Kaixeiro (#F3AA07), não o roxo do template.
+
+   Liquid glass (vidro líquido): o expo-glass-effect é do React Native/Expo e não roda em
+   página web; aqui o mesmo efeito é feito em CSS (desfoque + saturação do que passa por
+   baixo, borda com reflexo e brilho interno). Só barras e elementos flutuantes usam vidro:
+   o desfoque custa GPU, e nos cartões ele deixaria a rolagem pesada no celular.
+   Carregado DEPOIS do <style> de cada página, para sobrepor o visual antigo. */
+
+:root{
+  --kx-bg:#060606;
+  --kx-amber:#F3AA07; --kx-amber-hi:#FFCB52; --kx-amber-lo:#C98700;
+  --kx-surface:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.018));
+  --kx-edge:rgba(255,255,255,.09);
+  --kx-r-lg:20px; --kx-r:14px; --kx-r-sm:10px;
+  --kx-glass-bg:linear-gradient(145deg,rgba(255,255,255,.15),rgba(255,255,255,.055) 42%,rgba(255,255,255,.035));
+  --kx-glass-blur:blur(22px) saturate(175%);
+  --kx-glass-shadow:inset 0 1px 0 rgba(255,255,255,.30),inset 0 -1px 0 rgba(255,255,255,.06),
+    inset 0 0 22px rgba(255,255,255,.05),0 16px 36px -12px rgba(0,0,0,.75);
+  --kx-btn:linear-gradient(180deg,var(--kx-amber-hi),var(--kx-amber) 58%,var(--kx-amber-lo));
+  --kx-btn-glow:inset 0 1px 0 rgba(255,255,255,.55),inset 0 -2px 6px rgba(0,0,0,.16),0 10px 26px -10px rgba(243,170,7,.75);
+}
+
+/* ---------- Fundo ---------- */
+html{background:var(--kx-bg)}
+body{background:transparent !important}
+/* Brilho âmbar vindo do topo (como o roxo do Wuizt) */
+body::before{
+  content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;
+  background:
+    radial-gradient(38% 26% at 50% -4%,rgba(255,206,110,.22),transparent 72%),
+    radial-gradient(75% 52% at 50% -10%,rgba(243,170,7,.20),transparent 72%),
+    radial-gradient(45% 35% at 100% 0%,rgba(255,120,0,.07),transparent 70%),
+    radial-gradient(55% 40% at 0% 100%,rgba(243,170,7,.06),transparent 70%);
+}
+/* Grade + quadradinhos acesos, sumindo para baixo */
+body::after{
+  content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='264' height='264'%3E%3Cg fill='%23F3AA07'%3E%3Crect x='44' y='0' width='44' height='44' opacity='.07'/%3E%3Crect x='176' y='132' width='44' height='44' opacity='.045'/%3E%3C/g%3E%3Cg fill='%23fff'%3E%3Crect x='0' y='176' width='44' height='44' opacity='.03'/%3E%3Crect x='132' y='44' width='44' height='44' opacity='.025'/%3E%3Crect x='220' y='220' width='44' height='44' opacity='.02'/%3E%3C/g%3E%3C/svg%3E"),
+    linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px);
+  background-size:264px 264px,44px 44px,44px 44px;
+  background-position:center top;
+  -webkit-mask-image:radial-gradient(120% 75% at 50% 0%,#000 0%,rgba(0,0,0,.45) 45%,transparent 82%);
+          mask-image:radial-gradient(120% 75% at 50% 0%,#000 0%,rgba(0,0,0,.45) 45%,transparent 82%);
+}
+
+/* ---------- Vidro líquido ---------- */
+.kx-glass{
+  background:var(--kx-glass-bg) !important;
+  -webkit-backdrop-filter:var(--kx-glass-blur);backdrop-filter:var(--kx-glass-blur);
+  border:1px solid rgba(255,255,255,.13) !important;
+  box-shadow:var(--kx-glass-shadow);
+}
+/* Reflexo na borda: claro em cima à esquerda, some no meio, volta fraco embaixo */
+.kx-glass::before{
+  content:"";position:absolute;inset:-1px;border-radius:inherit;pointer-events:none;padding:1px;
+  background:linear-gradient(155deg,rgba(255,255,255,.6),rgba(255,255,255,0) 32%,rgba(255,255,255,0) 68%,rgba(255,255,255,.22));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;
+          mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude;
+}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .kx-glass{background:rgba(24,24,24,.95) !important}
+}
+@media (prefers-reduced-transparency:reduce){
+  .kx-glass{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(24,24,24,.97) !important}
+}
+
+/* ---------- Barra de abas flutuante (igual nas três telas) ---------- */
+.tabbar{
+  position:fixed;left:50%;bottom:calc(14px + env(safe-area-inset-bottom));transform:translateX(-50%);
+  z-index:18;display:flex;gap:4px;padding:6px;border-radius:30px;
+}
+.tabbar a{
+  position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  width:76px;height:56px;border-radius:24px;color:rgba(255,255,255,.62);text-decoration:none;
+  font:600 11px/1 "Barlow",system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;
+  transition:color .2s ease,background-color .2s ease,transform .15s ease;
+}
+.tabbar a svg{width:22px;height:22px;flex:none}
+.tabbar a:hover{color:#fff}
+.tabbar a:active{transform:scale(.93)}
+.tabbar a.active{color:#111;background:var(--kx-btn);box-shadow:var(--kx-btn-glow)}
+
+/* ---------- Barra do topo flutuante ---------- */
+.kx-topo{
+  position:sticky !important;top:calc(8px + env(safe-area-inset-top)) !important;
+  margin:8px 10px 0;border-radius:22px;border-bottom:0;
+}
+
+/* ---------- Toast e menus suspensos ---------- */
+.toast{border-radius:16px;bottom:calc(98px + env(safe-area-inset-bottom)) !important;color:#fff;font-weight:500}
+.odrop,.drop{border-radius:var(--kx-r);overflow:hidden}
+.odrop button,.drop .res{background:transparent !important}
+.odrop button:hover,.drop .res:hover{background:rgba(255,255,255,.07) !important}
+
+/* ---------- Modais ---------- */
+.modal{background:rgba(3,3,3,.78) !important}
+.mbox{border-radius:22px !important;background:linear-gradient(180deg,#141414,#0b0b0b) !important;
+  border:1px solid rgba(255,255,255,.12) !important;box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 30px 60px -20px #000}
+.mhead{border-bottom-color:rgba(255,255,255,.08) !important}
+.minput,.field input{border-radius:12px !important}
+.eancam,.viewer{border-radius:0}
+
+/* ---------- Botões ---------- */
+.btn-primary,
+.kx-full .btn:not(.ghost):not(.white):not(.quiet):not(:disabled),
+.kx-mapa .btn:not(.ghost):not(.quiet):not(:disabled){
+  background:var(--kx-btn) !important;border-color:transparent !important;color:#111 !important;box-shadow:var(--kx-btn-glow);
+}
+.btn-primary:hover,.kx-full .btn:not(.ghost):not(.white):not(.quiet):hover,.kx-mapa .btn:not(.ghost):not(.quiet):hover{filter:brightness(1.07)}
+.kx-full .btn,.kx-mapa .btn{border-radius:12px}
+.kx-full .btn.ghost,.kx-mapa .btn.ghost{background:rgba(243,170,7,.06);border-color:rgba(243,170,7,.55)}
+.kx-full .btn.quiet,.kx-mapa .btn.quiet,.kx-full .btn.white{background:rgba(255,255,255,.03)}
+.btn-ghost{background:rgba(255,255,255,.05) !important;border-color:rgba(255,255,255,.12) !important}
+.btn-done{border-radius:16px !important}
+
+/* ---------- Cartões (superfície leve, sem desfoque) ---------- */
+.kx-surface,
+.kx-bancada .result,.kx-bancada .pedido-prod,
+.kx-full .kpis,.kx-full .table,.kx-full .pcard,.kx-full .check,.kx-full .notice,
+.kx-mapa .stage-wrap,.kx-mapa .planta,.kx-mapa .painel,.kx-mapa .card{
+  background:var(--kx-surface);border-color:var(--kx-edge);border-radius:var(--kx-r-lg);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06);
+}
+.kx-full .table,.kx-full .kpis,.kx-full .codes,.kx-mapa .lista,.kx-mapa .cat{overflow:hidden}
+.kx-full .kpis > div{border-color:var(--kx-edge)}
+.kx-full .result,.kx-full .alerta-box,.kx-full .warn,.kx-full .err{border-radius:var(--kx-r)}
+.kx-full .codes,.kx-mapa .lista,.kx-mapa .cat{border-radius:var(--kx-r-sm)}
+.kx-full .trow{border-bottom-color:rgba(255,255,255,.06)}
+.kx-full .trow:hover{background:rgba(255,255,255,.035)}
+.kx-full .thead{border-bottom-color:var(--kx-edge)}
+.kx-full .grupo{background:rgba(243,170,7,.07);border-bottom-color:var(--kx-edge)}
+.kx-full .thumb{border-radius:12px;object-fit:contain;background-color:#fff}
+.kx-full .chip,.kx-full .flag{border-radius:6px}
+.kx-full .bar,.kx-full .bar > i,.kx-bancada .barra{border-radius:99px}
+.kx-full .cta{border-radius:10px}
+.kx-full .search,.kx-mapa .busca .box{border-radius:14px;background:rgba(255,255,255,.035)}
+.kx-full .seg{border-radius:12px;overflow:hidden}
+.kx-full .fchip{border-radius:99px;background:rgba(255,255,255,.03)}
+.kx-full .fchip.on,.kx-full .seg button.on{background:var(--kx-btn);color:#111;box-shadow:var(--kx-btn-glow)}
+.kx-full .check-item,.kx-full .quem-grid button,.kx-full .qtd-btn,.kx-full .choice button{border-radius:14px;background:rgba(255,255,255,.03)}
+.kx-full .check-item.on{background:var(--okbg)}
+.kx-full .quem-grid button.on{background:var(--kx-btn)}
+.kx-full .circle{background:radial-gradient(circle at 50% 30%,rgba(255,255,255,.07),rgba(255,255,255,.015) 70%);box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 0 40px -12px rgba(243,170,7,.45)}
+.kx-bancada .check-item{background:rgba(255,255,255,.03)}
+.kx-bancada .check-item.on{background:rgba(62,207,110,.1)}
+.kx-mapa .row,.kx-mapa .prod{background:transparent}
+.kx-mapa .row:hover,.kx-mapa .prod:hover{background:rgba(255,255,255,.05)}
+.kx-mapa .voltar,.kx-mapa .x,.kx-mapa .limpar{border-radius:12px;background:rgba(255,255,255,.04)}
+
+/* Carregando (enquanto a primeira resposta não chega) */
+.kx-load{display:flex;flex-direction:column;gap:14px;padding:32px 24px;max-width:1280px;margin:0 auto}
+.kx-load i{display:block;height:84px;border-radius:var(--kx-r-lg);background:linear-gradient(90deg,rgba(255,255,255,.035),rgba(255,255,255,.08),rgba(255,255,255,.035));background-size:200% 100%;animation:kxShim 1.2s linear infinite}
+.kx-load i:first-child{height:48px;width:55%}
+@keyframes kxShim{to{background-position:-200% 0}}
+
+@media (prefers-reduced-motion:reduce){
+  .tabbar a,.kx-load i{transition:none;animation:none}
+}
+@media (max-width:820px){
+  /* Os 3 números do topo lado a lado no celular (antes empilhavam e ocupavam a tela toda) */
+  .kx-full .kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .kx-full .kpis > div{padding:14px 12px}
+  .kx-full .kpis b{font-size:30px}
+  .kx-full .kpis span{font-size:12px;line-height:1.25}
+}
+@media (max-width:420px){
+  .tabbar a{width:68px}
+}

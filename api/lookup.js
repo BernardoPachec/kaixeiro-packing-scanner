@@ -25,20 +25,20 @@ async function codigosDosItens(itens) {
   const extra = new Map(); // chave (sku|inv|item_id) -> Set(códigos)
   const add = (k, c) => { if (k && ehCodigo(c)) (extra.get(k) || extra.set(k, new Set()).get(k)).add(String(c)); };
 
-  if (skus.length || invs.length) {
-    try {
-      const filtros = [skus.length && `sku.in.(${lista(skus)})`, invs.length && `inv.in.(${lista(invs)})`].filter(Boolean).join(",");
-      for (const r of await sbSelect("full_envio_itens", `or=(${filtros})&select=sku,inv,ean,gtins&limit=500`)) {
-        for (const c of [r.ean, ...(r.gtins || [])]) { add(r.sku, c); add(r.inv, c); }
-      }
-    } catch (e) { console.error("aviso: EAN dos PDFs do Full indisponível:", e.message); }
-  }
+  // As duas fontes do banco vão em paralelo.
   const chaves = [...skus, ...ids];
-  if (chaves.length) {
-    try {
-      for (const r of await sbSelect("produto_codigos", `chave=in.(${lista(chaves)})&select=chave,codigo`)) add(r.chave, r.codigo);
-    } catch (e) { /* tabela ainda não criada */ }
-  }
+  const filtros = [skus.length && `sku.in.(${lista(skus)})`, invs.length && `inv.in.(${lista(invs)})`].filter(Boolean).join(",");
+  const [doFull, ensinados] = await Promise.all([
+    filtros
+      ? sbSelect("full_envio_itens", `or=(${filtros})&select=sku,inv,ean,gtins&limit=500`)
+        .catch((e) => { console.error("aviso: EAN dos PDFs do Full indisponível:", e.message); return []; })
+      : [],
+    chaves.length
+      ? sbSelect("produto_codigos", `chave=in.(${lista(chaves)})&select=chave,codigo`).catch(() => []) // tabela ainda não criada
+      : [],
+  ]);
+  for (const r of doFull) for (const c of [r.ean, ...(r.gtins || [])]) { add(r.sku, c); add(r.inv, c); }
+  for (const r of ensinados) add(r.chave, r.codigo);
 
   const out = itens.map((i) => {
     const set = new Set(i.gtins || []);
