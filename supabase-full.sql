@@ -119,3 +119,8 @@ alter table full_envio_itens add column if not exists separado_em  timestamptz;
 -- ============================================================
 alter table full_envio_itens add column if not exists preco  numeric;
 alter table full_envio_itens add column if not exists marca  text;
+
+-- 06/11/2026) Quando o envio foi despachado: depois de 22 dias ele sai do scanner sozinho.
+alter table full_envios add column if not exists despachado_em timestamptz;
+update full_envios set despachado_em = coalesce(atualizado_em, importado_em)
+  where status = 'despachado' and despachado_em is null;

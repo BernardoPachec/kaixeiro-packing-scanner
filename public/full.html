@@ -118,6 +118,17 @@
   .pcard{position:relative;border:1px solid var(--line2);padding:22px;display:flex;gap:22px;align-items:center;flex-wrap:wrap}
   .pcard .reg{position:absolute;color:var(--y);font:300 14px/1 monospace}
   .pfoto{flex:none;width:132px;height:132px;border-radius:50%;border:1px solid var(--y);background:#fff center/72% no-repeat}
+  /* Foto da Tela 03 amplia ao tocar (Bernardo, 06/11/2026). A versão grande só baixa no toque. */
+  button.pfoto{padding:0;cursor:zoom-in;position:relative}
+  button.pfoto::after{content:"";position:absolute;right:4px;bottom:4px;width:30px;height:30px;border-radius:50%;
+    background:#111 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23F3AA07' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-4-4M11 8v6M8 11h6'/%3E%3C/svg%3E") center/18px no-repeat;border:1px solid var(--y)}
+  .zoom{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.94);display:flex;flex-direction:column}
+  .zwrap{flex:1;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:12px}
+  .zwrap img{max-width:100%;max-height:100%;object-fit:contain;background:#fff;border-radius:12px;cursor:zoom-in}
+  .zoom.perto .zwrap{overflow:auto;display:block}
+  .zoom.perto .zwrap img{max-width:none;max-height:none;width:250%;cursor:zoom-out}
+  .zbar{display:flex;justify-content:space-between;align-items:center;padding:12px 16px calc(12px + env(safe-area-inset-bottom));color:var(--muted);font-size:13px}
+  .zbar button{height:44px;padding:0 18px;border-radius:12px;background:rgba(255,255,255,.08);border:1px solid var(--line2);color:#fff;font:600 15px var(--fh);letter-spacing:.1em;text-transform:uppercase;cursor:pointer}
   .pfoto.ph{background:repeating-linear-gradient(135deg,#111 0 10px,#161616 10px 20px);display:flex;align-items:center;justify-content:center;font:10px var(--mono);color:var(--dim);text-align:center}
   .pinfo{flex:1 1 260px;display:flex;flex-direction:column;gap:10px;min-width:0}
   .pinfo h1{margin:0;font:600 26px/1.1 var(--fh);text-transform:uppercase;text-wrap:pretty}
@@ -296,6 +307,12 @@
     <div class="mhead"><span id="choiceTitle">Qual produto?</span><button onclick="hide('choiceModal')" aria-label="Fechar">×</button></div>
     <div class="mbody"><div class="choice" id="choiceList"></div></div>
   </div>
+</div>
+
+<!-- Foto ampliada (Tela 03): toque na foto aproxima, toque de novo afasta -->
+<div class="zoom hidden" id="zoom" onclick="if(event.target===this||event.target.id==='zwrap')fecharZoom()">
+  <div class="zwrap" id="zwrap"><img id="zimg" alt="Foto do produto" onclick="alternarZoom(event)"></div>
+  <div class="zbar"><span id="zdica">Toque na foto para aproximar</span><button onclick="fecharZoom()">Fechar</button></div>
 </div>
 
 <div class="toast kx-glass hidden" id="toast"></div>
@@ -518,7 +535,7 @@ function renderListaRows(list) {
         <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">${fmt(e.conferidas)} de ${fmt(e.declaradas)} un.</span><span style="color:${done?"var(--ok)":Y};font-weight:600">${p}%</span></div>
         <div class="bar"><i style="width:${p}%;background:${done?"var(--ok)":Y}"></i></div>
       </div>
-      <span class="st" style="color:${st[1]}">${st[0]}</span>
+      <div style="display:flex;flex-direction:column;gap:3px"><span class="st" style="color:${st[1]}">${st[0]}</span>${desp && e.sai_em ? `<span style="font-size:12px;color:var(--dim)">sai da lista em ${new Date(e.sai_em).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}</span>` : ""}</div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;justify-self:end">
         <span class="cta" style="background:${desp?"transparent":Y};color:${desp?Y:"#000"}">${desp ? "Detalhes" : "Montar"} ${ICON.chev}</span>
         <button class="mini" onclick="event.stopPropagation();descartarEnvio('${esc(e.frete)}')">descartar</button>
@@ -1006,10 +1023,42 @@ async function setStatus(status) {
   await api({ acao: "editar", frete: S.envio.frete, status });
   await loadEnvio(S.envio.frete); renderEnvio();
 }
+// Excluir envio pede a senha (Bernardo, 06/11/2026), conferida no servidor. Vale para o
+// "Excluir envio" da Tela 02 e o "descartar" da Tela 01.
+function pedirSenha(frete, aviso) {
+  return new Promise((ok) => {
+    IMP = { senhaOk: ok };
+    $("impBody").innerHTML = `
+      <p style="margin:0;font-size:15px;color:#cfcfcf">Excluir o envio <b class="mono" style="color:#fff">#${esc(frete)}</b> do scanner?${aviso ? " " + esc(aviso) : ""} A contagem e o histórico de leituras dele se perdem. (Nada muda no Mercado Livre.)</p>
+      <form style="display:flex;flex-direction:column;gap:10px" onsubmit="event.preventDefault();responderSenha(true)">
+        <span class="lbl">Senha para excluir</span>
+        <input id="senhaExcluir" class="minput" type="password" autocomplete="off" autocapitalize="off" placeholder="Digite a senha">
+        <button class="btn" type="submit" style="background:var(--bad) !important;color:#fff !important;box-shadow:none">Excluir envio</button>
+        <button class="btn quiet" type="button" onclick="responderSenha(false)">Cancelar</button>
+      </form>`;
+    show("impModal");
+    setTimeout(() => $("senhaExcluir").focus(), 50);
+  });
+}
+function responderSenha(confirmou) {
+  const ok = IMP && IMP.senhaOk, v = confirmou ? $("senhaExcluir").value : null;
+  if (confirmou && !v) return toast("Digite a senha.");
+  closeImport();
+  if (ok) ok(v);
+}
+async function excluirComSenha(frete, aviso) {
+  const senha = await pedirSenha(frete, aviso);
+  if (senha == null) return false;
+  try {
+    await api({ acao: "excluir", frete, senha });
+  } catch (e) { toast(e.message, 5000); return false; }
+  if (S.envio && S.envio.frete === frete) { S.envio = null; kxCache.set("envio", null); }
+  aplicarEnvios(S.envios.filter((x) => x.frete !== frete));
+  toast(`Envio #${frete} excluído.`);
+  return true;
+}
 async function delEnvio() {
-  if (!confirm(`Excluir o envio #${S.envio.frete} do scanner? A contagem e o histórico de leituras dele se perdem. (Nada muda no Mercado Livre.)`)) return;
-  await api({ acao: "excluir", frete: S.envio.frete });
-  S.envio = null; go("#/");
+  if (await excluirComSenha(S.envio.frete)) go("#/");
 }
 // Tela 02: alerta amarelo num produto (ainda chegando, em falta, não vai mais, alterar no ML...).
 const MOTIVOS_ALERTA = ["Ainda está chegando", "Em falta no galpão", "Não vamos mais enviar", "Precisa alterar o pedido no site do ML"];
@@ -1045,13 +1094,7 @@ async function salvarAlerta(ligar) {
 // Tela 01: descartar um envio direto da lista (os checklists dos anúncios ficam guardados).
 async function descartarEnvio(frete) {
   const e = S.envios.find((x) => x.frete === frete);
-  const feito = e && e.conferidas ? ` Já tem ${fmt(e.conferidas)} un. conferida(s), que se perdem.` : "";
-  if (!confirm(`Descartar o envio #${frete} do scanner?${feito} (Nada muda no Mercado Livre.)`)) return;
-  try {
-    await api({ acao: "excluir", frete });
-    if (S.envio && S.envio.frete === frete) S.envio = null;
-    await loadEnvios(); renderLista(); toast(`Envio #${frete} descartado.`);
-  } catch (err) { toast(err.message, 5000); }
+  if (await excluirComSenha(frete, e && e.conferidas ? `Já tem ${fmt(e.conferidas)} un. conferida(s).` : "")) renderLista();
 }
 
 // ---------- Tela 03: conferência do produto ----------
@@ -1076,7 +1119,7 @@ function renderProduto(inv) {
     <section class="pcard">
       <span class="reg" style="top:-6px;left:-6px">+</span><span class="reg" style="top:-6px;right:-6px">+</span>
       <span class="reg" style="bottom:-7px;left:-6px">+</span><span class="reg" style="bottom:-7px;right:-6px">+</span>
-      ${it.foto ? `<div class="pfoto" style="background-image:url('${esc(it.foto)}')"></div>` : '<div class="pfoto ph">FOTO DO<br>PRODUTO</div>'}
+      ${it.foto ? `<button class="pfoto" style="background-image:url('${esc(it.foto)}')" data-foto="${esc(it.foto)}" onclick="abrirZoom(this.dataset.foto)" aria-label="Ampliar a foto"></button>` : '<div class="pfoto ph">FOTO DO<br>PRODUTO</div>'}
       <div class="pinfo">
         <span class="eyebrow" style="font-size:12px">Nome no anúncio</span>
         <h1>${esc(it.titulo)}</h1>
@@ -1194,6 +1237,30 @@ async function onRead(slot, code) {
   const next = modo === "normal" && !S.prod ? "prod" : modo !== "universal" && !S.etq ? "etq" : null;
   if (next) openScanner(next);
 }
+
+// ---------- Foto ampliada ----------
+// O ML guarda a mesma foto em vários tamanhos pelo fim do nome (-I pequena, -O original):
+// pede a original e, se não existir, volta para a que já está na tela.
+const fotoGrande = (u) => String(u).replace(/-[A-Z]\.(jpe?g|png|webp)$/i, "-O.$1");
+function abrirZoom(url) {
+  const img = $("zimg");
+  img.onerror = () => { img.onerror = null; img.src = url; };
+  img.src = fotoGrande(url);
+  $("zoom").classList.remove("perto");
+  $("zdica").textContent = "Toque na foto para aproximar";
+  show("zoom");
+}
+function fecharZoom() { hide("zoom"); $("zoom").classList.remove("perto"); }
+function alternarZoom(ev) {
+  const z = $("zoom"), w = $("zwrap"), img = $("zimg");
+  if (z.classList.contains("perto")) { z.classList.remove("perto"); $("zdica").textContent = "Toque na foto para aproximar"; return; }
+  // Aproxima no ponto tocado: guarda a posição relativa e rola até ela depois de ampliar.
+  const r = img.getBoundingClientRect(), fx = (ev.clientX - r.left) / r.width, fy = (ev.clientY - r.top) / r.height;
+  z.classList.add("perto");
+  $("zdica").textContent = "Arraste para ver · toque para afastar";
+  requestAnimationFrame(() => { w.scrollLeft = fx * img.offsetWidth - w.clientWidth / 2; w.scrollTop = fy * img.offsetHeight - w.clientHeight / 2; });
+}
+document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && !$("zoom").classList.contains("hidden")) fecharZoom(); });
 
 // ---------- Checklist da embalagem + quem etiquetou ----------
 // O checklist e o botão "Marcar como feito" ficam sempre na tela: a leitura dos códigos é

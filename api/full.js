@@ -29,6 +29,26 @@ const {
 const SELLER_ID = process.env.ML_SELLER_ID || "2225972641";
 const enc = encodeURIComponent;
 
+// Envio despachado sai do scanner depois de 22 dias (Bernardo, 06/11/2026: não acumular peso).
+// Os checklists das etiquetas ficam: são por anúncio, não por envio.
+const DIAS_DESPACHADO = 22;
+// Senha para excluir envio na mão (evita apagar sem querer). Fica só na variável SENHA_EXCLUIR
+// do Vercel: o repositório é público, então a senha não pode estar no código.
+const SENHA_EXCLUIR = process.env.SENHA_EXCLUIR;
+// A coluna despachado_em vem do supabase-full.sql (bloco de 06/11/2026). Sem ela, vale a data
+// da última edição e a gravação segue sem a coluna.
+const semColunaDespachado = (e) => /despachado_em/.test(String(e && e.message));
+const despachadoEm = (e) => e.despachado_em || e.atualizado_em || e.importado_em;
+
+async function apagarEnvios(fretes) {
+  const lista = fretes.map((f) => `"${String(f).replace(/"/g, "")}"`).join(",");
+  // Linhas do envio saem junto (on delete cascade); as leituras não têm vínculo e saem aqui.
+  await Promise.all([
+    sbDelete("full_leituras", `frete=in.(${enc(lista)})`),
+    sbDelete("full_envios", `frete=in.(${enc(lista)})`),
+  ]);
+}
+
 function readBody(req) {
   if (req.body && typeof req.body === "object") return Promise.resolve(req.body);
   return new Promise((resolve) => {
@@ -57,7 +77,12 @@ async function listar() {
     sbSelect("full_leituras", "select=frete&resultado=eq.divergente&order=criado_em.desc&limit=5000"),
   ]);
   const comDivergencia = new Set(div.map((d) => d.frete));
-  return envios.map((e) => {
+  // Limpeza: despachados há mais de 22 dias saem aqui mesmo (só gasta consulta quando há algum).
+  const limite = Date.now() - DIAS_DESPACHADO * 864e5;
+  const vencidos = envios.filter((e) => e.status === "despachado" && new Date(despachadoEm(e)).getTime() < limite).map((e) => e.frete);
+  if (vencidos.length) await apagarEnvios(vencidos).catch((e) => console.error("limpeza de despachados:", e.message));
+  const sai = new Set(vencidos);
+  return envios.filter((e) => !sai.has(e.frete)).map((e) => {
     const linhas = itens.filter((i) => i.frete === e.frete);
     return {
       ...e,
@@ -67,6 +92,7 @@ async function listar() {
       conferidas: linhas.reduce((a, i) => a + i.conferidas, 0),
       alertas: linhas.filter((i) => i.alerta).length,
       divergencias: comDivergencia.has(e.frete),
+      sai_em: e.status === "despachado" ? new Date(new Date(despachadoEm(e)).getTime() + DIAS_DESPACHADO * 864e5).toISOString() : null,
     };
   });
 }
@@ -320,7 +346,14 @@ module.exports = async (req, res) => {
             atualizado_em: agora,
           }));
         if (!rows.length) return send(res, 400, { ok: false, error: "Nenhum envio válido." });
-        await sbUpsert("full_envios", rows, "frete");
+        // Despachado na tela do ML: conta os 22 dias a partir da primeira vez que veio assim.
+        const ja = await sbSelect("full_envios", `frete=in.(${enc(rows.map((r) => `"${r.frete}"`).join(","))})&select=frete,despachado_em`).catch(() => null);
+        const comData = ja ? rows.map((r) => ({ ...r,
+          despachado_em: r.status === "despachado" ? (ja.find((x) => x.frete === r.frete)?.despachado_em || agora) : null })) : rows;
+        await sbUpsert("full_envios", comData, "frete").catch((e) => {
+          if (semColunaDespachado(e)) return sbUpsert("full_envios", rows, "frete");
+          throw e;
+        });
         return send(res, 200, { ok: true, gravados: rows.length });
       }
 
@@ -396,14 +429,20 @@ module.exports = async (req, res) => {
           if (!["preparacao", "despachado"].includes(b.status))
             return send(res, 400, { ok: false, error: "status inválido." });
           patch.status = b.status;
+          patch.despachado_em = b.status === "despachado" ? patch.atualizado_em : null;
         }
-        await sbUpsert("full_envios", [patch], "frete");
+        await sbUpsert("full_envios", [patch], "frete").catch((e) => {
+          if (!semColunaDespachado(e)) throw e;
+          delete patch.despachado_em;
+          return sbUpsert("full_envios", [patch], "frete");
+        });
         return send(res, 200, { ok: true });
       }
 
       case "excluir":
-        await sbDelete("full_leituras", `frete=eq.${enc(String(b.frete))}`);
-        await sbDelete("full_envios", `frete=eq.${enc(String(b.frete))}`);
+        if (!SENHA_EXCLUIR) return send(res, 503, { ok: false, error: "Senha de exclusão não configurada no Vercel (variável SENHA_EXCLUIR)." });
+        if (String(b.senha || "") !== SENHA_EXCLUIR) return send(res, 403, { ok: false, error: "Senha errada. O envio não foi excluído." });
+        await apagarEnvios([String(b.frete)]);
         return send(res, 200, { ok: true });
 
       default:
