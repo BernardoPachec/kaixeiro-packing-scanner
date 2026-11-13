@@ -19,6 +19,7 @@
 //      ("conferir" aceita também responsavel e passos: quem embalou e o que foi feito)
 // POST /api/full { acao:"alerta", frete, inv, alerta:true|false, motivo }  -> alerta amarelo no produto
 // POST /api/full { acao:"separado", frete, inv, separado:true|false }      -> produto separado
+// POST /api/full { acao:"rapido", frete, invs:[...], feito:true|false }     -> modo rápido (sem conferência)
 // POST /api/full { acao:"editar", frete, centro?, data_coleta?, status? }
 // POST /api/full { acao:"excluir", frete }
 
@@ -289,7 +290,7 @@ async function enriquecer(frete) {
 
 // ---- Leituras e contagem ---------------------------------------------------------
 
-const RESULTADOS = ["ok", "sem_leitura", "divergente", "manual", "desfeito", "alerta", "separado"];
+const RESULTADOS = ["ok", "sem_leitura", "divergente", "manual", "desfeito", "alerta", "separado", "rapido"];
 
 async function registrarLeitura(b) {
   if (!RESULTADOS.includes(b.resultado)) return;
@@ -415,6 +416,24 @@ module.exports = async (req, res) => {
         await registrarLeitura({ frete: b.frete, inv: b.inv, resultado: "alerta",
           detalhe: ligado ? `alerta: ${motivo}` : "alerta removido", responsavel: b.responsavel });
         return send(res, 200, { ok: true, item: rows[0] });
+      }
+
+      case "rapido": {
+        // Modo rápido (Tela 02): marca produtos como feitos (ou desfaz) sem leitura, checklist
+        // nem "quem fez". full_conferir limita entre 0 e o declarado, então ±9999 = tudo/nada.
+        const invs = [...new Set((Array.isArray(b.invs) ? b.invs : []).map(String))].filter((i) => /^[A-Z]{4}\d{5}$/.test(i)).slice(0, 500);
+        if (!b.frete || !invs.length) return send(res, 400, { ok: false, error: "frete e produtos são obrigatórios." });
+        const delta = b.feito === false ? -9999 : 9999, frete = String(b.frete), conferidas = {};
+        for (let k = 0; k < invs.length; k += 10) {
+          await Promise.all(invs.slice(k, k + 10).map(async (inv) => {
+            const r = await sbRpc("full_conferir", { p_frete: frete, p_inv: inv, p_delta: delta });
+            conferidas[inv] = Array.isArray(r) ? r[0] : r;
+          }));
+        }
+        await sbUpsert("full_leituras", invs.map((inv) => ({
+          frete, inv, resultado: delta > 0 ? "rapido" : "desfeito", detalhe: delta > 0 ? "modo rápido" : "modo rápido: desfeito",
+        }))).catch(() => {});
+        return send(res, 200, { ok: true, conferidas });
       }
 
       case "leitura":

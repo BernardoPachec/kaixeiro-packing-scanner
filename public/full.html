@@ -90,6 +90,11 @@
   .fchip.on{background:var(--y);border-color:var(--y);color:#000}
   .chip.w{border-color:#fff;color:#fff}
   .ordenar{position:relative}
+  .rapido-box{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;border:1px solid var(--y);background:var(--ytint,rgba(243,170,7,.12));padding:12px 16px;font-size:14px;color:#cfcfcf}
+  .rapido-box b{font:600 16px var(--fh);letter-spacing:.1em;text-transform:uppercase;color:var(--y)}
+  .rapido-btn{align-self:flex-start;height:44px;font-size:15px}
+  .rapido-link{font-size:11px;color:var(--dim);opacity:.45;text-decoration:none;padding:6px 2px}
+  .rapido-link:hover{opacity:1}
   .odrop{position:absolute;top:44px;left:0;z-index:15;background:var(--s1);border:1px solid var(--line2);min-width:270px;box-shadow:0 12px 32px rgba(0,0,0,.6)}
   .odrop button{display:block;width:100%;text-align:left;padding:12px 14px;background:none;border:0;border-bottom:1px solid var(--line);color:#fff;font:500 15px var(--fb);cursor:pointer}
   .odrop button:hover{background:var(--s3)}
@@ -482,6 +487,9 @@ async function loadEnvios() { aplicarEnvios(await buscarEnvios()); }
 function renderLista() {
   crumb([{ t: "Envios" }]);
   const prep = S.envios.filter((e) => e.status !== "despachado");
+  // Progresso geral: unidades feitas / declaradas de todos os envios em preparação.
+  const totDecl = prep.reduce((a, e) => a + e.declaradas, 0), totFeito = prep.reduce((a, e) => a + Math.min(e.conferidas, e.declaradas), 0);
+  const pg = pct(totFeito, totDecl);
   const list = S.envios.filter((e) =>
     (S.filtro === "todos" || (S.filtro === "prep" ? e.status !== "despachado" : e.status === "despachado")) &&
     e.frete.includes(S.busca.replace("#", "").trim()));
@@ -502,6 +510,8 @@ function renderLista() {
       <div><b>${prep.length}</b><span>Envios em preparação</span></div>
       <div><b style="color:${Y}">${fmt(prep.reduce((a, e) => a + e.declaradas - e.conferidas, 0))}</b><span>Unidades a conferir</span></div>
       <div><b style="color:var(--badtxt)">${S.envios.filter((e) => e.divergencias && e.status !== "despachado").length}</b><span>Com leitura divergente</span></div>
+      <div><b style="color:${pg === 100 && totDecl ? "var(--ok)" : Y}">${pg}%</b><span>${fmt(totFeito)} de ${fmt(totDecl)} un. feitas nos envios em preparação</span>
+        <div class="bar"><i style="width:${pg}%;background:${pg === 100 ? "var(--ok)" : Y}"></i></div></div>
     </div>
     <div class="tools">
       <div class="search">${ICON.search}<input id="busca" value="${esc(S.busca)}" placeholder="Buscar por n.º do frete" oninput="S.busca=this.value;renderListaRows()"></div>
@@ -838,6 +848,9 @@ function itensHtml(atual, lista) {
               </div>
               ${it.alerta ? `<div class="alerta-box"><span>⚠</span><span><b>Em alerta</b><br>${esc(it.alerta_motivo || "")}</span></div>` : ""}
               ${por.length ? `<span style="font-size:12px;color:var(--muted)">Feito por <b style="color:#fff">${esc(por.join(", "))}</b></span>` : ""}
+              ${S.rapido ? (it.conferidas >= it.unidades
+                ? `<button class="btn quiet sm" style="align-self:flex-start" onclick="event.stopPropagation();rapidoDesfazer('${it.inv}')">↺ Desfazer (feito)</button>`
+                : `<button class="btn sm rapido-btn" onclick="event.stopPropagation();rapido(['${it.inv}'], true)">✓ Feito · ${fmt(it.unidades - it.conferidas)} un.</button>`) : ""}
               <div style="display:flex;gap:16px;flex-wrap:wrap">
                 <button class="mini w" onclick="event.stopPropagation();toggleSeparado('${it.inv}')">${it.separado ? "✓ separado · desfazer" : "☐ marcar separado"}</button>
                 <button class="mini y" onclick="event.stopPropagation();openAlerta('${it.inv}')">⚠ ${it.alerta ? "editar alerta" : "marcar alerta"}</button>
@@ -861,7 +874,6 @@ function renderEnvio() {
   const semFoto = S.itens.filter((i) => !i.enriquecido_em).length;
   const fl = filtrosEnvio();
   const { atual, lista } = listaTela02();
-  const chip = ([k, l, fn]) => `<button class="fchip ${atual[0] === k ? "on" : ""}" onclick="setFiltro('${esc(k).replace(/'/g, "\\'")}')">${esc(l)} · ${S.itens.filter(fn).length}</button>`;
   const desp = e.status === "despachado";
   $("view").innerHTML = `
   <main>
@@ -872,8 +884,8 @@ function renderEnvio() {
         <p class="sub">${esc(e.centro || "Centro não informado")} · ${esc(e.data_coleta || "coleta sem data")} · <a href="javascript:editEnvio()">editar</a></p>
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;min-width:240px">
-        <span style="font-size:13px;color:var(--muted)">${fmt(done)} de ${fmt(tot)} un. conferidas · ${pend.length} produto(s) pendente(s)</span>
-        <div class="bar" style="width:240px"><i style="width:${pct(done, tot)}%;background:${done === tot ? "var(--ok)" : Y}"></i></div>
+        <span style="font-size:13px;color:var(--muted)" id="progTxt">${progTxt()}</span>
+        <div class="bar" style="width:240px"><i id="progBar" style="width:${pct(done, tot)}%;background:${done === tot ? "var(--ok)" : Y}"></i></div>
       </div>
     </div>
 
@@ -884,15 +896,14 @@ function renderEnvio() {
 
     <div class="search" style="max-width:none;flex:none">${ICON.search}<input id="buscaItem" value="${esc(S.buscaItem || "")}" placeholder="Buscar produto por nome, Código ML, SKU ou EAN" oninput="buscarItem(this.value)" autocomplete="off"><button class="mini ${S.buscaItem ? "" : "hidden"}" id="limparItem" onclick="buscarItem('')">limpar</button></div>
 
-    <div class="filtros">
-      <span class="lbl">Filtrar</span>${fl.base.map(chip).join("")}
-      <div class="ordenar">
-        <button class="fchip ${S.ordem !== "padrao" ? "on" : ""}" onclick="toggleOrdem(event)">Ordenar por${S.ordem !== "padrao" ? ": " + esc((ORDENS.find(([k]) => k === S.ordem) || ORDENS[0])[1]) : ""} ▾</button>
-        ${S.ordemAberta ? `<div class="odrop kx-glass">${ORDENS.map(([k, l]) => `<button class="${S.ordem === k ? "on" : ""}" onclick="setOrdem('${k}')">${S.ordem === k ? "✓ " : ""}${esc(l)}</button>`).join("")}</div>` : ""}
-      </div>
-      <button class="fchip ${S.agrupar ? "on" : ""}" onclick="toggleAgrupar()">${S.agrupar ? "✓ " : ""}Agrupar por marca</button>
-      ${fl.pessoas.length ? `<span class="lbl" style="margin-left:6px">Feito por</span>${fl.pessoas.map(chip).join("")}` : ""}
-    </div>
+    <div class="filtros" id="filtrosEnvio">${filtrosHtml(fl, atual)}</div>
+
+    ${S.rapido ? `<div class="rapido-box" id="rapidoBox">
+      <span><b>⚡ Modo rápido</b><br>"✓ Feito" completa o produto sem leitura, checklist nem quem fez.</span>
+      <span style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn sm" onclick="rapidoTodos()">Marcar todos os pendentes</button>
+        <button class="btn quiet sm" onclick="toggleRapido()">Sair do modo rápido</button>
+      </span></div>` : ""}
 
     <div class="notice">${ICON.info}<span>Enviar quantidade diferente da declarada gera custo por inconformidade. Nos produtos com <b style="color:${Y}">etiquetagem obrigatória</b>, leia o código do produto <b>antes</b> de colar a etiqueta do ML por cima.</span></div>
 
@@ -907,7 +918,65 @@ function renderEnvio() {
 
     ${S.leituras.length ? `<div class="log"><span class="lbl">Últimas leituras</span>${S.leituras.slice(0, 12).map((l) =>
       `<span>${new Date(l.criado_em).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })} · <b style="color:${l.resultado === "ok" ? "var(--ok)" : l.resultado === "divergente" ? "var(--badtxt)" : "var(--muted)"}">${esc(l.resultado)}</b> · ${esc(l.inv || "—")} ${l.responsavel ? "· por <b>" + esc(l.responsavel) + "</b>" : ""} ${l.detalhe ? "· " + esc(l.detalhe) : ""}</span>`).join("")}</div>` : ""}
+    <div style="display:flex;justify-content:flex-end"><a href="javascript:toggleRapido()" class="rapido-link">${S.rapido ? "sair do modo rápido" : "modo rápido"}</a></div>
   </main>`;
+}
+
+// Pedaços da Tela 02 que mudam sem refazer a página (modo rápido, contadores).
+function progTxt() {
+  const tot = S.itens.reduce((a, i) => a + i.unidades, 0), done = S.itens.reduce((a, i) => a + i.conferidas, 0);
+  return `${fmt(done)} de ${fmt(tot)} un. conferidas · ${S.itens.filter((i) => i.conferidas < i.unidades).length} produto(s) pendente(s)`;
+}
+function filtrosHtml(fl, atual) {
+  const chip = ([k, l, fn]) => `<button class="fchip ${atual[0] === k ? "on" : ""}" onclick="setFiltro('${esc(k).replace(/'/g, "\\'")}')">${esc(l)} · ${S.itens.filter(fn).length}</button>`;
+  return `<span class="lbl">Filtrar</span>${fl.base.map(chip).join("")}
+      <div class="ordenar">
+        <button class="fchip ${S.ordem !== "padrao" ? "on" : ""}" onclick="toggleOrdem(event)">Ordenar por${S.ordem !== "padrao" ? ": " + esc((ORDENS.find(([k]) => k === S.ordem) || ORDENS[0])[1]) : ""} ▾</button>
+        ${S.ordemAberta ? `<div class="odrop kx-glass">${ORDENS.map(([k, l]) => `<button class="${S.ordem === k ? "on" : ""}" onclick="setOrdem('${k}')">${S.ordem === k ? "✓ " : ""}${esc(l)}</button>`).join("")}</div>` : ""}
+      </div>
+      <button class="fchip ${S.agrupar ? "on" : ""}" onclick="toggleAgrupar()">${S.agrupar ? "✓ " : ""}Agrupar por marca</button>
+      ${fl.pessoas.length ? `<span class="lbl" style="margin-left:6px">Feito por</span>${fl.pessoas.map(chip).join("")}` : ""}`;
+}
+function atualizarTela02() {
+  const { fl, atual, lista } = listaTela02();
+  const tot = S.itens.reduce((a, i) => a + i.unidades, 0), done = S.itens.reduce((a, i) => a + i.conferidas, 0);
+  $("tblItens").innerHTML = itensHtml(atual, lista);
+  $("filtrosEnvio").innerHTML = filtrosHtml(fl, atual);
+  $("progTxt").textContent = progTxt();
+  $("progBar").style.width = pct(done, tot) + "%";
+  $("progBar").style.background = done === tot ? "var(--ok)" : Y;
+}
+
+// ---------- Modo rápido (link discreto no fim da Tela 02) ----------
+// Marca o produto inteiro como feito sem leitura, checklist nem "quem fez". Fica só nesta
+// aba (não é guardado): ao recarregar, volta ao normal.
+function toggleRapido() {
+  if (!S.rapido && !confirm("Ligar o modo rápido?\n\nOs produtos poderão ser marcados como feitos SEM conferência de código, checklist ou quem fez.")) return;
+  S.rapido = !S.rapido;
+  redesenhar(renderEnvio);
+  if (S.rapido) $("rapidoBox").scrollIntoView({ behavior: "smooth", block: "center" });
+}
+async function rapido(invs, feito) {
+  try {
+    const r = await api({ acao: "rapido", frete: S.envio.frete, invs, feito });
+    for (const it of S.itens) if (it.inv in r.conferidas && r.conferidas[it.inv] != null) it.conferidas = r.conferidas[it.inv];
+    S.envioSig = null; // a próxima atualização por trás redesenha com os dados do servidor
+    atualizarTela02();
+    toast(feito ? `${invs.length} produto(s) marcados como feitos.` : "Desfeito.", 1800);
+  } catch (e) { toast("Não salvou: " + e.message, 5000); }
+}
+function rapidoTodos() {
+  const { lista } = listaTela02();
+  const pend = lista.filter((i) => i.conferidas < i.unidades);
+  if (!pend.length) return toast("Nenhum produto pendente nesta lista.");
+  const un = pend.reduce((a, i) => a + i.unidades - i.conferidas, 0);
+  if (!confirm(`Marcar ${pend.length} produto(s) (${fmt(un)} un.) como feitos, sem conferência?${S.buscaItem || S.itemFiltro !== "todos" ? "\n\nVale só para o que está na lista (filtro/busca atual)." : ""}`)) return;
+  rapido(pend.map((i) => i.inv), true);
+}
+function rapidoDesfazer(inv) {
+  const it = S.itens.find((i) => i.inv === inv);
+  if (!confirm(`Zerar a contagem de "${it.titulo}"? (${fmt(it.conferidas)} un. voltam para pendente)`)) return;
+  rapido([inv], false);
 }
 
 async function toggleSeparado(inv) {
